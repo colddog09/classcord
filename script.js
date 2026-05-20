@@ -632,8 +632,6 @@ function renderStudy() {
   $$('#starRow .star-btn').forEach(btn => {
     btn.classList.toggle('filled', parseInt(btn.dataset.star, 10) <= star);
   });
-  $('#bookmarkBtn').textContent = star > 0 ? '★' : '☆';
-  $('#bookmarkBtn').classList.toggle('starred', star > 0);
 }
 
 // 커버 클릭 → 뜻 공개

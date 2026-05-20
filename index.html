@@ -166,7 +166,11 @@
       <div class="sv-card-topbar">
         <span class="sv-mode-label" id="modeBadge">단어 제시</span>
         <div class="sv-card-icons">
-          <button class="sv-icon-btn" id="bookmarkBtn" title="별점">☆</button>
+          <div class="sv-inline-stars" id="starRow">
+            <button class="star-btn" data-star="1">★</button>
+            <button class="star-btn" data-star="2">★</button>
+            <button class="star-btn" data-star="3">★</button>
+          </div>
           <span class="sv-studying-label">학습중...</span>
         </div>
       </div>
@@ -185,13 +189,6 @@
       <!-- 뒷면: 뜻 / 단어 -->
       <div class="sv-back" id="svBack"></div>
     </div>
-  </div>
-
-  <!-- 별점 (카드 아래) -->
-  <div class="sv-star-row" id="starRow">
-    <button class="star-btn" data-star="1">★</button>
-    <button class="star-btn" data-star="2">★</button>
-    <button class="star-btn" data-star="3">★</button>
   </div>
 
   <!-- 답 확인 후 버튼 -->
