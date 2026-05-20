@@ -217,30 +217,6 @@ function openDetail(id) {
     </div>`;
   }).join('');
 
-  $('#detailGrid').addEventListener('click', e => {
-    // 별점 버튼 클릭
-    const starBtn = e.target.closest('.dc-star-btn');
-    if (starBtn) {
-      e.stopPropagation();
-      const idx  = parseInt(starBtn.dataset.cardIdx, 10);
-      const val  = parseInt(starBtn.dataset.star, 10);
-      const cur  = s.starRatings[idx] || 0;
-      s.starRatings[idx] = (cur === val) ? 0 : val; // 같은 별 다시 클릭 → 해제
-      saveSets();
-      // 해당 카드 별점만 업데이트
-      const card = starBtn.closest('.detail-card');
-      card.querySelectorAll('.dc-star-btn').forEach(b => {
-        b.classList.toggle('filled', parseInt(b.dataset.star) <= (s.starRatings[idx] || 0));
-      });
-      return;
-    }
-    // 카드 뒤집기
-    const card = e.target.closest('.detail-card');
-    if (!card) return;
-    const flipped = card.dataset.flipped === 'true';
-    card.dataset.flipped = !flipped;
-    card.classList.toggle('flipped', !flipped);
-  });
   showView('detail');
 }
 
@@ -254,6 +230,34 @@ document.addEventListener('click', e => {
     case 'export': exportSet(id); break;
     case 'delete': confirmDelete(id); break;
   }
+});
+
+$('#detailGrid').addEventListener('click', e => {
+  const s = getSet(state.currentSetId);
+  if (!s) return;
+
+  // 별점 버튼 클릭
+  const starBtn = e.target.closest('.dc-star-btn');
+  if (starBtn) {
+    e.stopPropagation();
+    const idx = parseInt(starBtn.dataset.cardIdx, 10);
+    const val = parseInt(starBtn.dataset.star, 10);
+    const cur = s.starRatings[idx] || 0;
+    s.starRatings[idx] = (cur === val) ? 0 : val;
+    saveSets();
+    const card = starBtn.closest('.detail-card');
+    card.querySelectorAll('.dc-star-btn').forEach(b => {
+      b.classList.toggle('filled', parseInt(b.dataset.star) <= (s.starRatings[idx] || 0));
+    });
+    return;
+  }
+
+  // 카드 뒤집기
+  const card = e.target.closest('.detail-card');
+  if (!card) return;
+  const flipped = card.dataset.flipped === 'true';
+  card.dataset.flipped = String(!flipped);
+  card.classList.toggle('flipped', !flipped);
 });
 
 $('#detailBackBtn').addEventListener('click', () => { showView('home'); renderHome(); });
