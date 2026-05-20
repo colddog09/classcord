@@ -494,22 +494,56 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   margin: 0 auto;
 }
 .detail-card {
+  perspective: 600px;
+  border-radius: 10px;
+  cursor: pointer;
+  animation: cardIn 0.3s cubic-bezier(0.4,0,0.2,1) both;
+  min-height: 110px;
+}
+.detail-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 110px;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+  border-radius: 10px;
+}
+.detail-card.flipped .detail-card-inner {
+  transform: rotateY(180deg);
+}
+.detail-card-front,
+.detail-card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px 16px 18px;
   box-shadow: var(--shadow-xs);
-  transition: box-shadow var(--transition), transform var(--transition);
-  cursor: default;
-  animation: cardIn 0.3s cubic-bezier(0.4,0,0.2,1) both;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow var(--transition);
 }
-.detail-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.detail-card:hover .detail-card-front,
+.detail-card:hover .detail-card-back {
+  box-shadow: var(--shadow-md);
+}
+.detail-card-back {
+  transform: rotateY(180deg);
+  background: var(--primary);
+}
 .detail-card-star {
   color: var(--gold);
   font-size: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
   display: block;
   opacity: 0;
+  align-self: flex-start;
 }
 .detail-card-star.visible { opacity: 1; }
 .detail-card-word {
@@ -518,14 +552,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   text-align: center;
   color: var(--text);
 }
-.detail-card-meaning {
-  font-size: 13px;
+.detail-card-phonetic {
+  font-size: 12px;
   color: var(--text-muted);
   text-align: center;
-  margin-top: 6px;
-  display: none;
+  margin-top: 4px;
 }
-.detail-card.show-meaning .detail-card-meaning { display: block; }
+.detail-card-meaning {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+}
 
 /* 검색바 제거됨 */
 

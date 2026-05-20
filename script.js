@@ -200,12 +200,27 @@ function openDetail(id) {
   $('#detailMeta').textContent = `${s.cards.length} 카드 | ${formatDate(s.lastStudied)}`;
   $('#detailGrid').innerHTML = s.cards.map((c, i) => {
     const starred = (s.starRatings[i] || 0) > 0;
-    return `<div class="detail-card">
-      <span class="detail-card-star ${starred ? 'visible' : ''}">★</span>
-      <div class="detail-card-word">${escapeHtml(c.word || c.meaning)}</div>
-      <div class="detail-card-meaning">${escapeHtml(c.meaning || c.word)}</div>
+    return `<div class="detail-card" data-flipped="false">
+      <div class="detail-card-inner">
+        <div class="detail-card-front">
+          <span class="detail-card-star ${starred ? 'visible' : ''}">★</span>
+          <div class="detail-card-word">${escapeHtml(c.word || c.meaning)}</div>
+          ${c.phonetic ? `<div class="detail-card-phonetic">${escapeHtml(c.phonetic)}</div>` : ''}
+        </div>
+        <div class="detail-card-back">
+          <div class="detail-card-meaning">${escapeHtml(c.meaning || c.word)}</div>
+        </div>
+      </div>
     </div>`;
   }).join('');
+
+  $('#detailGrid').addEventListener('click', e => {
+    const card = e.target.closest('.detail-card');
+    if (!card) return;
+    const flipped = card.dataset.flipped === 'true';
+    card.dataset.flipped = !flipped;
+    card.classList.toggle('flipped', !flipped);
+  });
   showView('detail');
 }
 
