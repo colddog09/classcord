@@ -535,7 +535,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .detail-card-back {
   transform: rotateY(180deg);
-  background: var(--primary);
+  background: #3B82F6;
 }
 .detail-card-star {
   color: var(--gold);
@@ -1991,22 +1991,21 @@ kbd {
     gap: 8px;
     padding: 12px 16px;
   }
-  .detail-card { min-height: 0; }
-  .detail-card-inner { min-height: 0; }
+  .detail-card { min-height: 64px; }
+  .detail-card-inner { min-height: 64px; }
   .detail-card-front,
   .detail-card-back {
-    position: relative;
-    padding: 12px 16px;
+    padding: 14px 18px;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
-    min-height: 52px;
+    gap: 10px;
+    min-height: 64px;
   }
-  .detail-card-back { position: absolute; }
-  .detail-card-star { margin-bottom: 0; margin-right: 8px; font-size: 13px; }
-  .detail-card-word { font-size: 15px; text-align: left; flex: 1; }
+  .detail-card-star { margin-bottom: 0; font-size: 13px; flex-shrink: 0; }
+  .detail-card-word { font-size: 15px; font-weight: 700; text-align: left; color: var(--text); }
   .detail-card-phonetic { display: none; }
-  .detail-card-meaning { font-size: 14px; }
+  .detail-card-meaning { font-size: 15px; font-weight: 600; text-align: left; }
 }
 
 @media (prefers-reduced-motion: reduce) {
