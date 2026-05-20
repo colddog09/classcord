@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>플래시카드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://code.responsivevoice.org/responsivevoice.js"></script>
+</head>
+<body>
+
+<header class="app-header">
+  <h1 id="logoBtn">플래시<span class="accent">카드</span></h1>
+  <div class="header-actions">
+    <button class="icon-btn" id="themeToggle" title="다크 모드" aria-label="다크 모드 전환">
+      <span class="theme-icon">🌙</span>
+    </button>
+  </div>
+</header>
+
+<main id="appRoot">
+
+<!-- HOME VIEW -->
+<section class="view" id="homeView">
+  <div class="view-header">
+    <div class="view-title">내 단어장</div>
+    <div class="view-actions">
+      <button class="btn" id="importJsonBtn"><span>📂</span> JSON 가져오기</button>
+      <button class="btn primary" id="newSetBtn"><span>＋</span> 새 단어장 만들기</button>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-bar" id="searchInput" placeholder="단어장 이름으로 검색..." />
+  </div>
+  <div id="setList" class="set-list"></div>
+  <input type="file" id="jsonFileInput" accept=".json" hidden />
+</section>
+
+<!-- EDIT VIEW -->
+<section class="view" id="editView">
+  <div class="view-header">
+    <div class="view-title" id="editTitle">새 단어장</div>
+    <button class="btn ghost" id="editBackBtn">← 취소</button>
+  </div>
+
+  <div class="field-group">
+    <label class="field-label" for="editNameInput">단어장 이름</label>
+    <input type="text" class="text-input" id="editNameInput" placeholder="예) TOEIC Day 1" />
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">카드 테마 색상</label>
+    <div class="color-row">
+      <input type="color" class="color-picker" id="editColorInput" value="#3B82F6" />
+      <div class="color-preview" id="colorPreview"></div>
+      <span class="hint">카드 윗부분 색상에 적용됩니다</span>
+    </div>
+  </div>
+
+  <div class="cards-table-wrap">
+    <table class="cards-table">
+      <thead>
+        <tr>
+          <th class="row-num">#</th>
+          <th>단어</th>
+          <th>발음</th>
+          <th>뜻</th>
+          <th class="row-actions"></th>
+        </tr>
+      </thead>
+      <tbody id="editTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="add-row-wrap">
+    <button class="btn" id="addRowBtn">＋ 카드 추가</button>
+    <span class="card-count" id="cardCount"></span>
+  </div>
+
+  <div class="csv-section">
+    <h4>📋 CSV 일괄 입력</h4>
+    <p>한 줄에 한 카드씩: <code>word, phonetic, meaning</code> (헤더가 있으면 자동으로 제외됩니다)</p>
+    <textarea class="csv-textarea" id="csvInput" placeholder="apple, /ˈæp.əl/, 사과&#10;banana, /bəˈnæn.ə/, 바나나"></textarea>
+    <div class="csv-actions">
+      <button class="btn" id="csvImportBtn">CSV 가져오기</button>
+    </div>
+  </div>
+
+  <div class="edit-footer">
+    <button class="btn primary lg" id="saveSetBtn">💾 저장</button>
+    <button class="btn lg" id="exportJsonBtn">⬇ JSON 내보내기</button>
+  </div>
+</section>
+
+<!-- SESSION SETUP VIEW -->
+<section class="view" id="setupView">
+  <div class="view-header">
+    <div class="view-title" id="setupTitle">학습 설정</div>
+    <button class="btn ghost" id="setupBackBtn">← 취소</button>
+  </div>
+  <div class="setup-card">
+
+    <div class="option-group">
+      <label class="option-label">학습 종류</label>
+      <div class="option-row" id="modeChips">
+        <button class="option-chip active" data-mode="word">단어 제시 <small>앞면: 단어</small></button>
+        <button class="option-chip" data-mode="meaning">뜻 제시 <small>앞면: 뜻</small></button>
+      </div>
+    </div>
+
+    <div class="option-group">
+      <label class="option-label">카드 순서</label>
+      <div class="option-row" id="orderChips">
+        <button class="option-chip active" data-order="sequential">순서대로</button>
+        <button class="option-chip" data-order="random">랜덤</button>
+      </div>
+    </div>
+
+    <div class="option-group">
+      <label class="option-label">별점 필터</label>
+      <div class="option-row" id="filterChips">
+        <button class="option-chip active" data-filter="0">전체</button>
+        <button class="option-chip" data-filter="1">★ 이상</button>
+        <button class="option-chip" data-filter="2">★★ 이상</button>
+        <button class="option-chip" data-filter="3">★★★</button>
+      </div>
+    </div>
+
+    <div class="option-group">
+      <label class="option-label">끊어서 학습</label>
+      <div class="toggle-row">
+        <div class="toggle" id="chunkToggle" role="switch" tabindex="0"></div>
+        <span class="toggle-label" id="chunkLabel">한 번에 모든 카드 학습</span>
+        <input type="number" class="num-input" id="chunkSize" min="1" max="999" value="10" hidden />
+        <span class="hint" id="chunkUnit" hidden>개씩</span>
+      </div>
+    </div>
+
+    <div class="match-info" id="matchInfo">조건에 맞는 카드: 0개</div>
+
+    <button class="btn primary lg" id="startSessionBtn">학습 시작</button>
+  </div>
+</section>
+
+<!-- STUDY VIEW -->
+<section class="view full-bleed" id="studyView">
+  <div class="study-layout">
+    <aside class="study-sidebar">
+      <div id="sidebarList"></div>
+    </aside>
+
+    <div class="study-main">
+      <div class="progress-bar"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="study-meta">
+        <span id="progressText">1 / 1</span>
+        <span class="mode-badge" id="modeBadge">단어 제시</span>
+      </div>
+
+      <div class="flashcard-wrap">
+        <div class="flashcard" id="flashcard">
+          <div class="flashcard-face front" id="cardFront"></div>
+          <div class="flashcard-face back" id="cardBack"></div>
+          <div class="flip-hint" id="flipHint">클릭하여 뒤집기</div>
+        </div>
+      </div>
+
+      <div class="star-row" id="starRow">
+        <button class="star-btn" data-star="1" aria-label="별 1개">★</button>
+        <button class="star-btn" data-star="2" aria-label="별 2개">★</button>
+        <button class="star-btn" data-star="3" aria-label="별 3개">★</button>
+      </div>
+
+      <div class="study-actions">
+        <button class="btn" id="unknownBtn">😕 모르겠음</button>
+        <button class="btn" id="speakBtn">🔊 발음</button>
+        <button class="btn" id="knownBtn">✅ 알겠음</button>
+      </div>
+
+      <div class="nav-row">
+        <button class="btn" id="prevBtn">← 이전</button>
+        <button class="btn ghost" id="exitStudyBtn">목록으로</button>
+        <button class="btn primary" id="nextBtn">다음 →</button>
+      </div>
+
+      <div class="kbd-hint">
+        <span><kbd>←</kbd><kbd>→</kbd> 이동</span>
+        <span><kbd>Space</kbd> 뒤집기</span>
+        <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 별점</span>
+        <span><kbd>P</kbd> 발음</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SESSION COMPLETE VIEW -->
+<section class="view" id="completeView">
+  <div class="complete-card">
+    <div class="complete-icon">🎉</div>
+    <h2>세션 완료!</h2>
+    <div class="sub" id="completeSub">수고하셨습니다</div>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div class="complete-actions" id="completeActions"></div>
+  </div>
+  <canvas id="confettiCanvas"></canvas>
+</section>
+
+</main>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">확인</h3>
+    <p id="modalBody"></p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="modalCancel">취소</button>
+      <button class="btn danger" id="modalConfirm">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
