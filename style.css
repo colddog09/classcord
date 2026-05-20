@@ -1075,9 +1075,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   max-width: 760px;
   padding: 0 20px;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow: hidden;
 }
 
 /* 이제 알아요 플래시 오버레이 */
@@ -1381,7 +1383,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   display: none;
   gap: 0;
   padding: 0 20px;
-  margin-top: -12px;
+  flex-shrink: 0;
 }
 .sv-answer-btns.visible { display: flex; }
 .sv-btn-known, .sv-btn-unknown {
@@ -1414,7 +1416,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   display: flex;
   width: 100%;
   max-width: 760px;
-  padding: 8px 20px 20px;
+  padding: 8px 20px 12px;
+  flex-shrink: 0;
 }
 .sv-kbd-row span {
   flex: 1;
