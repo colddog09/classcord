@@ -64,7 +64,7 @@ function loadAll() {
   } catch {}
   try { state.stats = JSON.parse(localStorage.getItem(STATS_KEY) || '{}'); }
   catch { state.stats = {}; }
-  if (!state.sets.length) { state.sets = defaultSets(); saveLocal(); }
+  // 기본 샘플 세트 없음 — 사용자가 직접 만든 세트만 사용
 }
 
 function saveLocal() {
@@ -121,36 +121,6 @@ async function loadFromFirestore() {
   } catch(e) { console.warn('Firestore load failed:', e); }
 }
 
-function defaultSets() {
-  return [
-    {
-      id: 'sample-1',
-      name: 'TOEIC 기초 단어',
-      themeColor: '#3B82F6',
-      lastStudied: null,
-      starRatings: {},
-      cards: [
-        { word: 'achieve', phonetic: '/əˈtʃiːv/',    meaning: '달성하다, 성취하다' },
-        { word: 'benefit', phonetic: '/ˈben.ɪ.fɪt/', meaning: '이익, 혜택' },
-        { word: 'company', phonetic: '/ˈkʌm.pə.ni/', meaning: '회사' },
-        { word: 'develop', phonetic: '/dɪˈvel.əp/',  meaning: '발전시키다' },
-      ],
-    },
-    {
-      id: 'sample-2',
-      name: '일상 영어 표현',
-      themeColor: '#10B981',
-      lastStudied: null,
-      starRatings: {},
-      cards: [
-        { word: 'apple',   phonetic: '/ˈæp.əl/',      meaning: '사과' },
-        { word: 'breeze',  phonetic: '/briːz/',        meaning: '산들바람' },
-        { word: 'curious', phonetic: '/ˈkjʊə.ri.əs/', meaning: '호기심이 많은' },
-        { word: 'delight', phonetic: '/dɪˈlaɪt/',     meaning: '기쁨' },
-      ],
-    },
-  ];
-}
 
 const getSet = id => state.sets.find(s => s.id === id);
 
@@ -1176,13 +1146,37 @@ function toast(msg) {
 /* ============================================================
  *  Firebase 초기화 + Google 로그인
  * ============================================================ */
+/* ============================================================
+ *  로그인 화면 제어
+ * ============================================================ */
+function showLoginScreen() {
+  $('#loginScreen').classList.remove('hidden');
+  document.getElementById('appRoot').style.visibility = 'hidden';
+  document.querySelector('.app-header').style.visibility = 'hidden';
+}
+function hideLoginScreen() {
+  $('#loginScreen').classList.add('hidden');
+  document.getElementById('appRoot').style.visibility = '';
+  document.querySelector('.app-header').style.visibility = '';
+}
+
+$('#loginGoogleBtn').addEventListener('click', async () => {
+  if (!fbAuth) return;
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await fbAuth.signInWithPopup(provider);
+  } catch(e) {
+    toast('❌ 로그인 실패: ' + (e.message || e.code));
+  }
+});
+
 function initFirebase() {
   if (!FIREBASE_CONFIG.apiKey) {
     console.info('firebase-config.js 없음 → 로컬 전용 모드');
+    hideLoginScreen(); // 설정 없으면 그냥 진입 허용
     return;
   }
   try {
-    // 이미 초기화된 경우 재사용
     const app = firebase.apps.length
       ? firebase.app()
       : firebase.initializeApp(FIREBASE_CONFIG);
@@ -1193,7 +1187,12 @@ function initFirebase() {
     fbAuth.onAuthStateChanged(user => {
       fbUser = user;
       updateAuthUI();
-      if (user) loadFromFirestore();
+      if (user) {
+        hideLoginScreen();
+        loadFromFirestore();
+      } else {
+        showLoginScreen();
+      }
     });
 
     console.info('Firebase 초기화 성공');
@@ -1201,6 +1200,7 @@ function initFirebase() {
     console.error('Firebase 초기화 실패:', e);
     fbAuth = null;
     fbDb   = null;
+    hideLoginScreen();
   }
 }
 
@@ -1250,4 +1250,5 @@ $('#authBtn').addEventListener('click', async () => {
 loadAll();
 showView('home');
 renderHome();
+showLoginScreen(); // Firebase 인증 확인 전까지 로그인 화면 표시
 initFirebase();
