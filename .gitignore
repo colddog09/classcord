@@ -1,2 +1,6 @@
 .claude/
 .DS_Store
+Thumbs.db
+
+# Firebase 실제 설정 파일 (API 키 포함 — 절대 커밋 금지)
+firebase-config.js

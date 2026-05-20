@@ -7,16 +7,9 @@
  *  Firebase 설정
  *  Firebase Console > 프로젝트 설정 > 내 앱 > SDK 설정의 값을 넣어주세요
  * ============================================================ */
-const FIREBASE_CONFIG = {
-  apiKey:            'REDACTED_API_KEY',
-  authDomain:        'classcord-d5e63.firebaseapp.com',
-  databaseURL:       'https://classcord-d5e63-default-rtdb.firebaseio.com',
-  projectId:         'classcord-d5e63',
-  storageBucket:     'classcord-d5e63.firebasestorage.app',
-  messagingSenderId: 'REDACTED_SENDER_ID',
-  appId:             '1:REDACTED_SENDER_ID:web:50dd4cf204a54219442915',
-  measurementId:     'REDACTED_MEASUREMENT_ID',
-};
+// Firebase 설정은 firebase-config.js 에서 window.FIREBASE_CONFIG 로 주입됩니다.
+// (해당 파일은 .gitignore 처리되어 저장소에 포함되지 않습니다)
+const FIREBASE_CONFIG = window.FIREBASE_CONFIG || {};
 
 /* ----------- 상수 ----------- */
 const STORAGE_KEY  = 'flashcard.sets.v1';
@@ -1159,8 +1152,8 @@ function toast(msg) {
  *  Firebase 초기화 + Google 로그인
  * ============================================================ */
 function initFirebase() {
-  if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
-    console.info('Firebase config not set. Running in local-only mode.');
+  if (!FIREBASE_CONFIG.apiKey) {
+    console.info('firebase-config.js 없음 → 로컬 전용 모드로 실행');
     return;
   }
   try {
