@@ -12,8 +12,19 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<!-- Firebase 설정 (API 키 포함, .gitignore 처리됨) -->
-<script src="firebase-config.js" onerror="console.warn('firebase-config.js 로드 실패 — 로컬 전용 모드로 실행')"></script>
+<!-- Firebase 설정 -->
+<script>
+window.FIREBASE_CONFIG = {
+  apiKey:            'AIzaSyCfNvDrdRTp4Sv6JAKo1Ym0-NJySIpjtcY',
+  authDomain:        'classcord-d5e63.firebaseapp.com',
+  databaseURL:       'https://classcord-d5e63-default-rtdb.firebaseio.com',
+  projectId:         'classcord-d5e63',
+  storageBucket:     'classcord-d5e63.firebasestorage.app',
+  messagingSenderId: '586263069584',
+  appId:             '1:586263069584:web:50dd4cf204a54219442915',
+  measurementId:     'G-2LQ1H264E8'
+};
+</script>
 </head>
 <body>
 
