@@ -175,8 +175,6 @@ function renderHome() {
         <span class="ql-row-name">${escapeHtml(s.name)}</span>
         <span class="ql-row-count">${s.cards.length} 카드</span>
         ${stars ? `<span class="ql-row-stars">${stars}</span>` : ''}
-        <span class="ql-row-lock">🔒</span>
-        <span class="ql-row-check"></span>
       </div>
     `;
   }).join('');
