@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 배경 -->
+  <rect width="512" height="512" rx="96" fill="#3B82F6"/>
+  <!-- 뒷 카드 -->
+  <rect x="120" y="145" width="260" height="185" rx="18" fill="white" opacity="0.3"/>
+  <!-- 앞 카드 -->
+  <rect x="132" y="182" width="260" height="185" rx="18" fill="white"/>
+  <!-- 카드 상단 컬러 바 -->
+  <rect x="132" y="182" width="260" height="48" rx="18" fill="#3B82F6"/>
+  <rect x="132" y="210" width="260" height="20" fill="#3B82F6"/>
+  <!-- 텍스트 라인들 -->
+  <rect x="168" y="262" width="130" height="14" rx="7" fill="#CBD5E1"/>
+  <rect x="168" y="288" width="176" height="10" rx="5" fill="#E2E8F0"/>
+  <rect x="168" y="308" width="150" height="10" rx="5" fill="#E2E8F0"/>
+  <!-- 별 -->
+  <text x="340" y="298" font-size="28" fill="#FBBF24" text-anchor="middle">★</text>
+</svg>
