@@ -184,26 +184,28 @@
   <!-- 카드 영역 -->
   <div class="sv-card-wrap">
     <div class="sv-card" id="svCard">
-      <!-- 카드 내부 상단 아이콘 바 -->
+      <!-- 카드 진행 바 -->
+      <div class="sv-card-progress">
+        <div class="sv-card-progress-fill" id="svCardProgressFill"></div>
+      </div>
+      <div class="sv-card-progress-label" id="svCardProgressLabel">0 / 0 학습 완료</div>
+
+      <!-- 카드 내부 상단 아이콘 바 (좌: 모드 | 중앙: 스피커 | 우: 별) -->
       <div class="sv-card-topbar">
         <span class="sv-mode-label" id="modeBadge">단어 제시</span>
-        <div class="sv-card-icons">
-          <div class="sv-inline-stars" id="starRow">
-            <button class="star-btn" data-star="1">★</button>
-            <button class="star-btn" data-star="2">★</button>
-            <button class="star-btn" data-star="3">★</button>
-          </div>
-          <span class="sv-studying-label">학습중...</span>
+        <button id="speakBtn" class="sv-topbar-speak" title="발음 듣기">🔊</button>
+        <div class="sv-inline-stars" id="starRow">
+          <button class="star-btn" data-star="1">★</button>
+          <button class="star-btn" data-star="2">★</button>
+          <button class="star-btn" data-star="3">★</button>
         </div>
       </div>
 
+      <!-- 알겠음 플래시 오버레이 -->
+      <div class="sv-known-flash" id="svKnownFlash">✓</div>
+
       <!-- 앞면: 단어 / 뜻 -->
       <div class="sv-front" id="svFront"></div>
-
-      <!-- 스피커 버튼 (중앙) -->
-      <div class="sv-front-speak">
-        <button id="speakBtn" title="발음 듣기">🔊</button>
-      </div>
 
       <!-- 커버 + 뒷면 래퍼 (드래그 가능) -->
       <div class="sv-reveal-area">

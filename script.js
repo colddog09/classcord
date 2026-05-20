@@ -726,9 +726,15 @@ function renderStudy() {
   const cardIdx = sess.cardIdxs[sess.pos];
   const card    = set.cards[cardIdx];
 
-  $('#knownCount').textContent = sess.knownCount || 0;
-  $('#totalCount').textContent = sess.cardIdxs.length;
+  const knownN = sess.knownCount || 0;
+  const totalN = sess.cardIdxs.length;
+  $('#knownCount').textContent = knownN;
+  $('#totalCount').textContent = totalN;
   $('#modeBadge').textContent  = sess.mode === 'word' ? '단어 제시' : '뜻 제시';
+  // 카드 내 진행 표시
+  const pct = totalN > 0 ? (knownN / totalN) * 100 : 0;
+  $('#svCardProgressFill').style.width = pct + '%';
+  $('#svCardProgressLabel').textContent = `${knownN} / ${totalN} 학습 완료`;
 
   // 앞면
   const front = $('#svFront');
@@ -925,7 +931,18 @@ function markKnownAndNext() {
   if (!sess || !sess.revealed) return;
   sess.unknownSet.delete(sess.pos);
   sess.knownCount = (sess.knownCount || 0) + 1;
-  navNext();
+
+  // ✓ 플래시 + 카드 슬라이드 아웃 효과
+  const flash = $('#svKnownFlash');
+  const card  = $('#svCard');
+  flash.classList.remove('flash');
+  void flash.offsetWidth;
+  flash.classList.add('flash');
+  card.classList.add('known-out');
+  setTimeout(() => {
+    card.classList.remove('known-out');
+    navNext();
+  }, 320);
 }
 
 function speakCurrent() {
