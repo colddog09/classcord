@@ -8,12 +8,14 @@
  *  Firebase Console > 프로젝트 설정 > 내 앱 > SDK 설정의 값을 넣어주세요
  * ============================================================ */
 const FIREBASE_CONFIG = {
-  apiKey:            'YOUR_API_KEY',
-  authDomain:        'YOUR_PROJECT_ID.firebaseapp.com',
-  projectId:         'YOUR_PROJECT_ID',
-  storageBucket:     'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId:             'YOUR_APP_ID',
+  apiKey:            'REDACTED_API_KEY',
+  authDomain:        'classcord-d5e63.firebaseapp.com',
+  databaseURL:       'https://classcord-d5e63-default-rtdb.firebaseio.com',
+  projectId:         'classcord-d5e63',
+  storageBucket:     'classcord-d5e63.firebasestorage.app',
+  messagingSenderId: 'REDACTED_SENDER_ID',
+  appId:             '1:REDACTED_SENDER_ID:web:50dd4cf204a54219442915',
+  measurementId:     'REDACTED_MEASUREMENT_ID',
 };
 
 /* ----------- 상수 ----------- */
