@@ -582,6 +582,7 @@ function startSession(offset, customIdxs) {
     mode: state.setupConfig.mode,
     flipped: false,
     hintShown: true,
+    unknownSet: new Set(), // 모르겠음 누른 카드 인덱스 (cardIdxs 기준)
   };
 
   showView('study');
@@ -627,6 +628,7 @@ function renderStudy() {
     btn.classList.toggle('filled', v <= star);
   });
 
+  updateUnknownUI();
   renderSidebar();
 }
 
@@ -634,14 +636,15 @@ function renderSidebar() {
   const sess = state.session;
   const set  = getSet(sess.setId);
   $('#sidebarList').innerHTML = sess.cardIdxs.map((ci, i) => {
-    const card  = set.cards[ci];
-    const r     = set.starRatings[ci] || 0;
-    const stars = '★'.repeat(r);
-    const label = (card.word || card.meaning || '').slice(0, 22);
-    return `<div class="sidebar-item ${i === sess.pos ? 'active' : ''}" data-pos="${i}">
+    const card     = set.cards[ci];
+    const r        = set.starRatings[ci] || 0;
+    const stars    = '★'.repeat(r);
+    const label    = (card.word || card.meaning || '').slice(0, 22);
+    const unknown  = sess.unknownSet.has(i);
+    return `<div class="sidebar-item ${i === sess.pos ? 'active' : ''} ${unknown ? 'unknown' : ''}" data-pos="${i}">
       <span class="sidebar-num">${i + 1}.</span>
       <span class="sidebar-text">${escapeHtml(label)}</span>
-      <span class="stars">${stars}</span>
+      <span class="stars">${unknown ? '❓' : stars}</span>
     </div>`;
   }).join('');
   // 활성 항목으로 스크롤
@@ -720,8 +723,46 @@ function setStar(v, force = false) {
   renderStudy();
 }
 
-$('#unknownBtn').addEventListener('click', () => setStar(0, true));
-$('#knownBtn').addEventListener('click', () => setStar(3, true));
+$('#unknownBtn').addEventListener('click', () => toggleUnknown());
+$('#knownBtn').addEventListener('click', () => markKnown());
+
+function toggleUnknown() {
+  const sess = state.session;
+  if (!sess) return;
+  if (sess.unknownSet.has(sess.pos)) {
+    sess.unknownSet.delete(sess.pos);
+  } else {
+    sess.unknownSet.add(sess.pos);
+  }
+  updateUnknownUI();
+  renderSidebar();
+}
+
+function markKnown() {
+  const sess = state.session;
+  if (!sess) return;
+  sess.unknownSet.delete(sess.pos);
+  updateUnknownUI();
+  renderSidebar();
+}
+
+function updateUnknownUI() {
+  const sess = state.session;
+  const isUnknown = sess.unknownSet.has(sess.pos);
+  const btn = $('#unknownBtn');
+  btn.classList.toggle('active-unknown', isUnknown);
+  btn.textContent = isUnknown ? '😕 모르겠음 ✓' : '😕 모르겠음';
+  // 카드에 모르겠음 표시 뱃지
+  let badge = $('#unknownBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'unknownBadge';
+    badge.className = 'unknown-badge';
+    $('#flashcard').appendChild(badge);
+  }
+  badge.textContent = '모르겠음';
+  badge.style.display = isUnknown ? '' : 'none';
+}
 
 $('#speakBtn').addEventListener('click', speakCurrent);
 
@@ -798,12 +839,13 @@ function completeSession() {
 
   const counts = [0, 0, 0, 0];
   for (let i = 0; i < set.cards.length; i++) counts[set.starRatings[i] || 0]++;
+  const unknownCount = sess.unknownSet.size;
 
   $('#summaryGrid').innerHTML = [
     { label: '★★★', count: counts[3], zero: false },
     { label: '★★',  count: counts[2], zero: false },
     { label: '★',   count: counts[1], zero: false },
-    { label: '☆',   count: counts[0], zero: true  },
+    { label: '😕',  count: unknownCount, zero: true  },
   ].map((c, i) => `
     <div class="summary-cell ${c.zero ? 'zero' : ''}" style="animation: cardIn 0.4s ${i * 80}ms cubic-bezier(0.4,0,0.2,1) both;">
       <div class="label">${c.label}</div>
@@ -815,17 +857,16 @@ function completeSession() {
 
   const hasNext = state.setupConfig.chunkEnabled &&
     (sess.offset + state.setupConfig.chunkSize) < sess.allFilteredIdxs.length;
-  const zeroIdxs = [];
-  for (let i = 0; i < set.cards.length; i++) {
-    if ((set.starRatings[i] || 0) === 0) zeroIdxs.push(i);
-  }
+
+  // 이번 세션에서 모르겠음을 누른 카드들의 실제 set 인덱스
+  const unknownCardIdxs = [...sess.unknownSet].map(pos => sess.cardIdxs[pos]);
 
   const buttons = [];
   if (hasNext) {
     buttons.push(`<button class="btn primary lg" data-act="next-chunk">▶ 다음 세션 이어하기</button>`);
   }
-  if (zeroIdxs.length) {
-    buttons.push(`<button class="btn lg" data-act="restudy-zero">⭐ 별점 0짜리만 다시 학습 (${zeroIdxs.length}개)</button>`);
+  if (unknownCardIdxs.length) {
+    buttons.push(`<button class="btn lg unknown-btn" data-act="restudy-unknown">😕 모르겠음 카드만 다시 학습 (${unknownCardIdxs.length}개)</button>`);
   }
   buttons.push(`<button class="btn lg" data-act="restart">↻ 처음부터 다시</button>`);
   buttons.push(`<button class="btn ghost lg" data-act="home">목록으로</button>`);
@@ -836,10 +877,10 @@ function completeSession() {
     const b = e.target.closest('[data-act]');
     if (!b) return;
     switch (b.dataset.act) {
-      case 'next-chunk':   startSession(sess.offset + state.setupConfig.chunkSize); break;
-      case 'restudy-zero': startSession(0, zeroIdxs); break;
-      case 'restart':      startSession(0); break;
-      case 'home':         showView('home'); renderHome(); break;
+      case 'next-chunk':      startSession(sess.offset + state.setupConfig.chunkSize); break;
+      case 'restudy-unknown': startSession(0, unknownCardIdxs); break;
+      case 'restart':         startSession(0); break;
+      case 'home':            showView('home'); renderHome(); break;
     }
   };
 

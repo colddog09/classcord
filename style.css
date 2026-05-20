@@ -912,6 +912,32 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   color: var(--text-muted);
 }
 .kbd-hint span { display: inline-flex; gap: 4px; align-items: center; }
+/* 모르겠음 버튼 활성 상태 */
+.btn.active-unknown {
+  background: rgba(249, 115, 22, 0.12);
+  border-color: #F97316;
+  color: #F97316;
+}
+
+/* 플래시카드 모르겠음 뱃지 */
+.unknown-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #F97316;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}
+
+/* 사이드바 모르겠음 항목 */
+.sidebar-item.unknown { opacity: 0.75; }
+.sidebar-item.unknown .sidebar-text { text-decoration: line-through; }
+
 kbd {
   display: inline-block;
   padding: 2px 6px;
@@ -975,6 +1001,8 @@ kbd {
 .summary-cell.zero .label { color: var(--text-muted); }
 
 .complete-actions { display: flex; flex-direction: column; gap: 8px; }
+.unknown-btn { border-color: #F97316; color: #F97316; }
+.unknown-btn:hover { background: rgba(249,115,22,0.1); border-color: #F97316; color: #F97316; }
 
 #confettiCanvas {
   position: fixed;
