@@ -566,7 +566,7 @@ $('#editTableBody').addEventListener('click', e => {
     }, 230);
   } else if (btn.dataset.action === 'preview') {
     const w = state.editDraft.cards[idx].word.trim();
-    if (w && window.responsiveVoice) responsiveVoice.speak(w, 'UK English Female');
+    if (w) speakText(w);
   }
 });
 
@@ -963,12 +963,37 @@ function markKnownAndNext() {
   }, 320);
 }
 
+/* ---- Web Speech API (무료, 브라우저 내장) ---- */
+function speakText(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel(); // 이전 음성 중단
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang  = 'en-US';
+  utter.rate  = 0.9;   // 약간 느리게
+  utter.pitch = 1.0;
+
+  // 영어 여성 음성 우선 선택
+  const voices = speechSynthesis.getVoices();
+  const preferred = voices.find(v =>
+    v.lang.startsWith('en') && v.name.toLowerCase().includes('female')
+  ) || voices.find(v => v.lang === 'en-US')
+    || voices.find(v => v.lang.startsWith('en'));
+  if (preferred) utter.voice = preferred;
+
+  speechSynthesis.speak(utter);
+}
+
+// 음성 목록이 비동기로 로드되므로 미리 캐시
+if (window.speechSynthesis) {
+  speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+}
+
 function speakCurrent() {
   const sess = state.session; if (!sess) return;
   const set  = getSet(sess.setId);
   const card = set.cards[sess.cardIdxs[sess.pos]];
-  if (card.word && window.responsiveVoice)
-    responsiveVoice.speak(card.word, 'UK English Female');
+  if (card.word) speakText(card.word);
 }
 
 $('#exitStudyBtn').addEventListener('click', () => { showView('home'); renderHome(); });
