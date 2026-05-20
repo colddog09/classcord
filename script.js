@@ -754,13 +754,11 @@ function renderStudy() {
       (card.phonetic ? `<div class="sv-back-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
   }
 
-  // 커버 초기화 (새 카드 → 덮기)
+  // 커버 초기화 (새 카드 → 완전히 덮기)
   sess.revealed = false;
-  const cvr = $('#svCover');
-  cvr.style.transform = '';
-  cvr.style.transition = '';
-  cvr.classList.remove('hidden', 'snap-back');
-  $('#svRecover').classList.add('hidden');
+  svCoverEl.style.transition = 'none';
+  svCoverEl.style.transform  = 'translateY(0)';
+  svCoverEl.classList.remove('hidden');
   $('#answerBtns').classList.remove('visible');
   $('#kbdRow').classList.add('hidden');
 
@@ -771,16 +769,32 @@ function renderStudy() {
   );
 }
 
-/* ---- 커버 드래그 (마우스 + 터치) ---- */
+/* ---- 커버 드래그 (↓ 아래로 공개 / ↑ 위로 다시 덮기) ---- */
+const COVER_HANDLE_H = 44;   // revealed 상태에서 핸들로 보이는 높이(px)
 let coverDrag = null;
 let suppressNextCardClick = false;
 const svCoverEl = $('#svCover');
 
+function coverRevealedY() {
+  return (svCoverEl.offsetHeight || 220) - COVER_HANDLE_H;
+}
+function coverSetY(y, spring = false) {
+  svCoverEl.style.transition = spring
+    ? 'transform 0.38s cubic-bezier(0.34,1.56,0.64,1)'
+    : 'none';
+  svCoverEl.style.transform = `translateY(${y}px)`;
+}
+
 function startCoverDrag(e) {
   const sess = state.session;
-  if (!sess || sess.revealed) return;
+  if (!sess) return;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  coverDrag = { startY: clientY, currentDelta: 0, moved: false };
+  coverDrag = {
+    startY:    clientY,
+    delta:     0,
+    moved:     false,
+    revealing: !sess.revealed,   // false = 다시 덮기 모드
+  };
   svCoverEl.style.transition = 'none';
 }
 
@@ -788,86 +802,95 @@ function onCoverMove(e) {
   if (!coverDrag) return;
   if (e.cancelable) e.preventDefault();
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  const delta = Math.max(0, coverDrag.startY - clientY);
-  if (delta > 5) coverDrag.moved = true;
-  coverDrag.currentDelta = delta;
-  svCoverEl.style.transform = `translateY(-${delta}px)`;
+
+  if (coverDrag.revealing) {
+    // ↓ 아래로 (공개)
+    const d = Math.max(0, clientY - coverDrag.startY);
+    if (d > 5) coverDrag.moved = true;
+    coverDrag.delta = d;
+    svCoverEl.style.transform = `translateY(${d}px)`;
+  } else {
+    // ↑ 위로 (다시 덮기) — 핸들에서 시작
+    const d = Math.max(0, coverDrag.startY - clientY);
+    if (d > 5) coverDrag.moved = true;
+    coverDrag.delta = d;
+    const newY = Math.max(0, coverRevealedY() - d);
+    svCoverEl.style.transform = `translateY(${newY}px)`;
+  }
 }
 
 function endCoverDrag() {
-  if (!coverDrag) return;
   document.removeEventListener('mousemove', onCoverMove);
-  document.removeEventListener('mouseup', endCoverDrag);
+  document.removeEventListener('mouseup',   endCoverDrag);
   document.removeEventListener('touchmove', onCoverMove);
-  document.removeEventListener('touchend', endCoverDrag);
+  document.removeEventListener('touchend',  endCoverDrag);
+  if (!coverDrag) return;
 
-  const { currentDelta, moved } = coverDrag;
+  const { delta, moved, revealing } = coverDrag;
   coverDrag = null;
+  const height = svCoverEl.offsetHeight || 220;
+  const threshold = height * 0.28;
 
-  if (!moved) {
-    svCoverEl.style.transition = '';
-    return; // 클릭 이벤트로 처리
-  }
-
-  suppressNextCardClick = true;
-  setTimeout(() => { suppressNextCardClick = false; }, 100);
-
-  const height = svCoverEl.offsetHeight || 200;
-  svCoverEl.style.transition = '';
-
-  if (currentDelta > height * 0.32) {
-    revealCard();
+  if (revealing) {
+    if (!moved) { svCoverEl.style.transition = ''; return; }  // 클릭 이벤트에 위임
+    suppressNextCardClick = true;
+    setTimeout(() => { suppressNextCardClick = false; }, 100);
+    if (delta > threshold) {
+      revealCard(true); // true = 드래그에서 호출 (애니메이션 이미 진행 중)
+    } else {
+      coverSetY(0, true);
+    }
   } else {
-    // 제자리로 복귀 (스프링 효과)
-    svCoverEl.classList.add('snap-back');
-    svCoverEl.style.transform = 'translateY(0)';
-    setTimeout(() => svCoverEl.classList.remove('snap-back'), 420);
+    if (!moved) return;
+    if (delta > threshold) {
+      recoverCard(true);
+    } else {
+      coverSetY(coverRevealedY(), true); // 핸들 위치로 복귀
+    }
   }
 }
 
 svCoverEl.addEventListener('mousedown', e => {
   startCoverDrag(e);
   document.addEventListener('mousemove', onCoverMove);
-  document.addEventListener('mouseup', endCoverDrag);
+  document.addEventListener('mouseup',   endCoverDrag);
 });
 svCoverEl.addEventListener('touchstart', e => {
   startCoverDrag(e);
   document.addEventListener('touchmove', onCoverMove, { passive: false });
-  document.addEventListener('touchend', endCoverDrag);
+  document.addEventListener('touchend',  endCoverDrag);
 }, { passive: true });
 
-/* ---- 커버 공개 / 복귀 ---- */
-function revealCard() {
+/* ---- 커버 공개 / 다시 덮기 ---- */
+function revealCard(fromDrag = false) {
   const sess = state.session;
   if (!sess || sess.revealed) return;
   sess.revealed = true;
-  svCoverEl.style.transform = '';
-  svCoverEl.classList.add('hidden');
-  $('#svRecover').classList.remove('hidden');
+  // 커버를 핸들 위치(아래)로 스프링 이동
+  svCoverEl.style.transition = 'transform 0.40s cubic-bezier(0.4,0,0.2,1)';
+  svCoverEl.style.transform  = `translateY(${coverRevealedY()}px)`;
   $('#answerBtns').classList.add('visible');
   $('#kbdRow').classList.remove('hidden');
   speakCurrent();
 }
 
-function recoverCard() {
+function recoverCard(fromDrag = false) {
   const sess = state.session;
   if (!sess || !sess.revealed) return;
   sess.revealed = false;
-  svCoverEl.style.transform = '';
-  svCoverEl.classList.remove('hidden', 'snap-back');
-  $('#svRecover').classList.add('hidden');
+  svCoverEl.style.transition = 'transform 0.38s cubic-bezier(0.34,1.56,0.64,1)';
+  svCoverEl.style.transform  = 'translateY(0)';
   $('#answerBtns').classList.remove('visible');
   $('#kbdRow').classList.add('hidden');
 }
 
-// 카드 클릭 (드래그가 아닌 단순 탭)
+// 단순 탭(클릭) 핸들러
 $('#svCard').addEventListener('click', e => {
   if (suppressNextCardClick) { suppressNextCardClick = false; return; }
-  if (e.target.closest('#speakBtn') || e.target.closest('#recoverBtn')) return;
+  if (e.target.closest('#speakBtn')) return;
   if (e.target.closest('#svCover')) { revealCard(); return; }
 });
 
-$('#recoverBtn').addEventListener('click', e => { e.stopPropagation(); recoverCard(); });
 $('#speakBtn').addEventListener('click', e => { e.stopPropagation(); speakCurrent(); });
 
 /* ---- 진행 ---- */

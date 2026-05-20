@@ -207,23 +207,24 @@
       <!-- 앞면: 단어 / 뜻 -->
       <div class="sv-front" id="svFront"></div>
 
-      <!-- 커버 + 뒷면 래퍼 (드래그 가능) -->
+      <!-- 커버 + 뒷면 래퍼 -->
       <div class="sv-reveal-area">
-        <!-- 뒷면: 뜻 / 단어 (항상 렌더링, 커버 아래에 위치) -->
+        <!-- 뒷면: 항상 렌더링, 커버 아래 -->
         <div class="sv-back" id="svBack"></div>
-        <!-- 커버 (위로 드래그해서 걷기) -->
+        <!-- 커버: 아래로 당겨서 걷기 / 위로 당겨서 다시 덮기 -->
         <div class="sv-cover" id="svCover">
+          <!-- 핸들: revealed 상태에서 바닥에 노출되는 40px 띠 -->
+          <div class="sv-cover-handle">
+            <span class="sv-cover-pill"></span>
+            <span class="sv-cover-up-hint">↑ 위로 당겨 다시 덮기</span>
+          </div>
+          <!-- 메인 힌트: 커버가 닫혀 있을 때 중앙 -->
           <div class="sv-cover-inner">
-            <p class="sv-cover-hint">위로 당기거나 클릭하세요</p>
-            <p class="sv-cover-key">Press SPACE</p>
-            <p class="sv-cover-drag-hint">↑ drag</p>
+            <p class="sv-cover-hint">아래로 당기거나 클릭하세요</p>
+            <p class="sv-cover-drag-hint">↓</p>
+            <p class="sv-cover-key">SPACE</p>
           </div>
         </div>
-      </div>
-
-      <!-- 다시 덮기 버튼 -->
-      <div class="sv-recover hidden" id="svRecover">
-        <button id="recoverBtn">↑ 다시 덮기</button>
       </div>
     </div>
   </div>
