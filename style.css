@@ -665,7 +665,298 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 #startSessionBtn { width: 100%; }
 
-/* ===== STUDY VIEW ===== */
+/* ===== STUDY VIEW (Quizlet-style) ===== */
+#studyView {
+  background: #1a1a2e;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 상단 헤더 */
+.sv-header {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 10px;
+}
+.sv-exit {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #888;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition), color var(--transition);
+}
+.sv-exit:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+.sv-progress-counter {
+  font-size: 20px;
+  font-weight: 700;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sv-known-count {
+  color: #8bc34a;
+  display: flex; align-items: center; gap: 4px;
+}
+.sv-known-count::before { content: '✓'; font-size: 16px; }
+.sv-divider { color: #555; font-weight: 400; }
+
+.sv-speak {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  font-size: 17px;
+  color: #888;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition), color var(--transition);
+}
+.sv-speak:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+/* 카드 래퍼 */
+.sv-card-wrap {
+  width: 100%;
+  max-width: 760px;
+  padding: 0 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* 메인 카드 */
+.sv-card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+}
+[data-theme="dark"] .sv-card { background: #fff; color: #1a1a1a; }
+
+.sv-card-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.sv-mode-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sv-card-icons {
+  display: flex; align-items: center; gap: 14px;
+}
+.sv-icon-btn {
+  font-size: 20px;
+  color: #bbb;
+  transition: color var(--transition), transform 0.15s;
+  line-height: 1;
+}
+.sv-icon-btn:hover { color: var(--gold); transform: scale(1.15); }
+.sv-icon-btn.starred { color: var(--gold); }
+.sv-studying-label {
+  font-size: 12px;
+  color: #bbb;
+}
+
+/* 앞면 (단어) */
+.sv-front {
+  padding: 32px 28px 20px;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.sv-word {
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+  line-height: 1.15;
+}
+.sv-phonetic {
+  font-size: 16px;
+  color: #999;
+  font-style: italic;
+  font-family: 'Inter', monospace;
+}
+.sv-meaning-front {
+  font-size: clamp(22px, 4vw, 36px);
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
+/* 커버 영역 */
+.sv-cover {
+  background: #8bc34a;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.sv-cover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+.sv-cover.hidden {
+  max-height: 0;
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+.sv-cover-inner { text-align: center; }
+.sv-cover-hint {
+  color: rgba(255,255,255,0.92);
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.sv-cover-key {
+  color: rgba(255,255,255,0.65);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* 뒷면 (뜻) */
+.sv-back {
+  flex: 1;
+  padding: 24px 28px 28px;
+  min-height: 0;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  border-top: 1px solid #f0f0f0;
+}
+.sv-back.visible { display: flex; }
+.sv-pos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border: 1.5px solid #aaa;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  margin-right: 8px;
+  flex-shrink: 0;
+  font-style: normal;
+}
+.sv-meaning {
+  font-size: clamp(20px, 3.5vw, 30px);
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.4;
+  word-break: keep-all;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sv-back-word {
+  font-size: clamp(24px, 4.5vw, 40px);
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+.sv-back-phonetic {
+  font-size: 15px;
+  color: #999;
+  font-style: italic;
+  font-family: 'Inter', monospace;
+}
+
+/* 별점 */
+.sv-star-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  padding: 12px 0 8px;
+}
+.sv-star-row .star-btn { font-size: 28px; }
+
+/* 답 확인 버튼 */
+.sv-answer-btns {
+  width: 100%;
+  max-width: 760px;
+  display: none;
+  gap: 0;
+  padding: 0 20px;
+}
+.sv-answer-btns.visible { display: flex; }
+.sv-btn-known, .sv-btn-unknown {
+  flex: 1;
+  padding: 18px 12px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--font);
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.sv-btn-known {
+  background: #8bc34a;
+  color: #fff;
+  border-radius: 12px 0 0 12px;
+}
+.sv-btn-known:hover { filter: brightness(1.08); }
+.sv-btn-unknown {
+  background: #fff;
+  color: #1a1a1a;
+  border-radius: 0 12px 12px 0;
+  border: 2px solid #e0e0e0;
+  border-left: none;
+}
+.sv-btn-unknown:hover { background: #f5f5f5; }
+
+/* 키보드 힌트 */
+.sv-kbd-row {
+  display: flex;
+  width: 100%;
+  max-width: 760px;
+  padding: 8px 20px 20px;
+}
+.sv-kbd-row span {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sv-kbd-row.hidden { visibility: hidden; }
+
+/* ===== OLD STUDY VIEW LAYOUT (keep for sidebar ref) ===== */
 .study-layout {
   display: grid;
   grid-template-columns: 280px 1fr;

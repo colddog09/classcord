@@ -148,50 +148,62 @@
 
 <!-- STUDY VIEW -->
 <section class="view full-bleed" id="studyView">
-  <div class="study-layout">
-    <aside class="study-sidebar">
-      <div id="sidebarList"></div>
-    </aside>
+  <!-- 상단 헤더 -->
+  <div class="sv-header">
+    <button class="sv-exit" id="exitStudyBtn">✕</button>
+    <div class="sv-progress-counter">
+      <span class="sv-known-count"><span id="knownCount">0</span></span>
+      <span class="sv-divider">|</span>
+      <span id="totalCount">0</span>
+    </div>
+    <button class="sv-speak" id="speakBtn" title="발음">🔊</button>
+  </div>
 
-    <div class="study-main">
-      <div class="progress-bar"><div class="progress-bar-fill" id="progressFill"></div></div>
-      <div class="study-meta">
-        <span id="progressText">1 / 1</span>
-        <span class="mode-badge" id="modeBadge">단어 제시</span>
-      </div>
-
-      <div class="flashcard-wrap">
-        <div class="flashcard" id="flashcard">
-          <div class="flashcard-face front" id="cardFront"></div>
-          <div class="flashcard-face back" id="cardBack"></div>
-          <div class="flip-hint" id="flipHint">클릭하여 뒤집기</div>
+  <!-- 카드 영역 -->
+  <div class="sv-card-wrap">
+    <div class="sv-card" id="svCard">
+      <!-- 카드 내부 상단 아이콘 바 -->
+      <div class="sv-card-topbar">
+        <span class="sv-mode-label" id="modeBadge">단어 제시</span>
+        <div class="sv-card-icons">
+          <button class="sv-icon-btn" id="bookmarkBtn" title="별점">☆</button>
+          <span class="sv-studying-label">학습중...</span>
         </div>
       </div>
 
-      <div class="star-row" id="starRow">
-        <button class="star-btn" data-star="1" aria-label="별 1개">★</button>
-        <button class="star-btn" data-star="2" aria-label="별 2개">★</button>
-        <button class="star-btn" data-star="3" aria-label="별 3개">★</button>
+      <!-- 앞면: 단어 / 뜻 -->
+      <div class="sv-front" id="svFront"></div>
+
+      <!-- 커버 (뒷면 가리개) -->
+      <div class="sv-cover" id="svCover">
+        <div class="sv-cover-inner">
+          <p class="sv-cover-hint">커버를 클릭하여 의미를 확인하세요</p>
+          <p class="sv-cover-key">Press SPACE</p>
+        </div>
       </div>
 
-      <div class="study-actions">
-        <button class="btn" id="unknownBtn">😕 모르겠음</button>
-        <button class="btn" id="speakBtn">🔊 발음</button>
-        <button class="btn" id="knownBtn">✅ 알겠음</button>
-      </div>
-
-      <div class="nav-row">
-        <button class="btn ghost" id="exitStudyBtn">목록으로</button>
-      </div>
-
-      <div class="kbd-hint">
-        <span><kbd>→</kbd> 알겠음</span>
-        <span><kbd>←</kbd> 모르겠음</span>
-        <span><kbd>Space</kbd> 뒤집기</span>
-        <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 별점</span>
-        <span><kbd>P</kbd> 발음</span>
-      </div>
+      <!-- 뒷면: 뜻 / 단어 -->
+      <div class="sv-back" id="svBack"></div>
     </div>
+  </div>
+
+  <!-- 별점 (카드 아래) -->
+  <div class="sv-star-row" id="starRow">
+    <button class="star-btn" data-star="1">★</button>
+    <button class="star-btn" data-star="2">★</button>
+    <button class="star-btn" data-star="3">★</button>
+  </div>
+
+  <!-- 답 확인 후 버튼 -->
+  <div class="sv-answer-btns" id="answerBtns">
+    <button class="sv-btn-known" id="knownBtn">✓ 이제 알아요</button>
+    <button class="sv-btn-unknown" id="unknownBtn">나중에 한번 더</button>
+  </div>
+
+  <!-- 키보드 힌트 -->
+  <div class="sv-kbd-row" id="kbdRow">
+    <span>SHIFT+SPACE</span>
+    <span>SPACE</span>
   </div>
 </section>
 

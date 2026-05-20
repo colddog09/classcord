@@ -583,6 +583,8 @@ function startSession(offset, customIdxs) {
     flipped: false,
     hintShown: true,
     unknownSet: new Set(), // 모르겠음 누른 카드 인덱스 (cardIdxs 기준)
+    knownCount: 0,
+    revealed: false,
   };
 
   showView('study');
@@ -590,86 +592,62 @@ function startSession(offset, customIdxs) {
 }
 
 function renderStudy() {
-  const sess = state.session;
-  const set  = getSet(sess.setId);
-  document.documentElement.style.setProperty('--set-color', set.themeColor || '#3B82F6');
-
-  const total = sess.cardIdxs.length;
-  const cur   = sess.pos + 1;
-  $('#progressFill').style.width = ((sess.pos + 1) / total * 100) + '%';
-  $('#progressText').textContent = `${cur} / ${total}`;
-  $('#modeBadge').textContent = sess.mode === 'word' ? '단어 제시' : '뜻 제시';
-
+  const sess    = state.session;
+  const set     = getSet(sess.setId);
   const cardIdx = sess.cardIdxs[sess.pos];
   const card    = set.cards[cardIdx];
 
-  const fc = $('#flashcard');
-  fc.classList.toggle('flipped', sess.flipped);
+  // 진행 카운터
+  $('#knownCount').textContent = sess.knownCount || 0;
+  $('#totalCount').textContent = sess.cardIdxs.length;
+  $('#modeBadge').textContent  = sess.mode === 'word' ? '단어 제시' : '뜻 제시';
 
-  const front = $('#cardFront');
-  const back  = $('#cardBack');
+  // 앞면
+  const front = $('#svFront');
   if (sess.mode === 'word') {
-    front.innerHTML = `
-      <div class="flashcard-word">${escapeHtml(card.word)}</div>
-      <div class="flashcard-phonetic">${escapeHtml(card.phonetic || '')}</div>`;
-    back.innerHTML = `<div class="flashcard-meaning">${escapeHtml(card.meaning)}</div>`;
+    front.innerHTML = `<div class="sv-word">${escapeHtml(card.word)}</div>` +
+      (card.phonetic ? `<div class="sv-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
   } else {
-    front.innerHTML = `<div class="flashcard-meaning">${escapeHtml(card.meaning)}</div>`;
-    back.innerHTML = `
-      <div class="flashcard-word">${escapeHtml(card.word)}</div>
-      <div class="flashcard-phonetic">${escapeHtml(card.phonetic || '')}</div>`;
+    front.innerHTML = `<div class="sv-meaning-front">${escapeHtml(card.meaning)}</div>`;
   }
 
-  $('#flipHint').style.display = (sess.pos === 0 && sess.hintShown) ? '' : 'none';
+  // 뒷면
+  const back = $('#svBack');
+  if (sess.mode === 'word') {
+    back.innerHTML = `<div class="sv-meaning">${escapeHtml(card.meaning)}</div>`;
+  } else {
+    back.innerHTML = `<div class="sv-back-word">${escapeHtml(card.word)}</div>` +
+      (card.phonetic ? `<div class="sv-back-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
+  }
 
+  // 커버 초기화 (새 카드 → 덮기)
+  sess.revealed = false;
+  $('#svCover').classList.remove('hidden');
+  $('#svBack').classList.remove('visible');
+  $('#answerBtns').classList.remove('visible');
+  $('#kbdRow').classList.add('hidden');
+
+  // 별점
   const star = set.starRatings[cardIdx] || 0;
   $$('#starRow .star-btn').forEach(btn => {
-    const v = parseInt(btn.dataset.star, 10);
-    btn.classList.toggle('filled', v <= star);
+    btn.classList.toggle('filled', parseInt(btn.dataset.star, 10) <= star);
   });
-
-  updateUnknownUI();
-  renderSidebar();
+  $('#bookmarkBtn').textContent = star > 0 ? '★' : '☆';
+  $('#bookmarkBtn').classList.toggle('starred', star > 0);
 }
 
-function renderSidebar() {
+// 커버 클릭 → 뜻 공개
+function revealCard() {
   const sess = state.session;
-  const set  = getSet(sess.setId);
-  $('#sidebarList').innerHTML = sess.cardIdxs.map((ci, i) => {
-    const card     = set.cards[ci];
-    const r        = set.starRatings[ci] || 0;
-    const stars    = '★'.repeat(r);
-    const label    = (card.word || card.meaning || '').slice(0, 22);
-    const unknown  = sess.unknownSet.has(i);
-    return `<div class="sidebar-item ${i === sess.pos ? 'active' : ''} ${unknown ? 'unknown' : ''}" data-pos="${i}">
-      <span class="sidebar-num">${i + 1}.</span>
-      <span class="sidebar-text">${escapeHtml(label)}</span>
-      <span class="stars">${unknown ? '❓' : stars}</span>
-    </div>`;
-  }).join('');
-  // 활성 항목으로 스크롤
-  const active = $('#sidebarList .sidebar-item.active');
-  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  if (!sess || sess.revealed) return;
+  sess.revealed = true;
+  $('#svCover').classList.add('hidden');
+  $('#svBack').classList.add('visible');
+  $('#answerBtns').classList.add('visible');
+  $('#kbdRow').classList.remove('hidden');
 }
 
-$('#sidebarList').addEventListener('click', e => {
-  const item = e.target.closest('.sidebar-item');
-  if (!item) return;
-  state.session.pos = parseInt(item.dataset.pos, 10);
-  state.session.flipped = false;
-  renderStudy();
-});
-
-const flashcardEl = $('#flashcard');
-flashcardEl.addEventListener('click', () => flipCard());
-
-function flipCard() {
-  if (!state.session) return;
-  state.session.flipped = !state.session.flipped;
-  if (state.session.hintShown) state.session.hintShown = false;
-  flashcardEl.classList.toggle('flipped', state.session.flipped);
-  $('#flipHint').style.display = 'none';
-}
+$('#svCard').addEventListener('click', () => revealCard());
 
 function navNext() {
   const sess = state.session;
@@ -690,11 +668,10 @@ function navNext() {
         flipped: false,
         hintShown: false,
         unknownSet: new Set(),  // 새 라운드는 초기화
+        knownCount: sess.knownCount || 0,
+        revealed: false,
         isRetry: true,
       };
-      flashcardEl.classList.remove('flipped');
-      flashcardEl.classList.add('swipe-in');
-      setTimeout(() => flashcardEl.classList.remove('swipe-in'), 360);
       renderStudy();
     } else {
       completeSession();
@@ -703,9 +680,6 @@ function navNext() {
   }
   sess.pos = newPos;
   sess.flipped = false;
-  flashcardEl.classList.remove('flipped');
-  flashcardEl.classList.add('swipe-in');
-  setTimeout(() => flashcardEl.classList.remove('swipe-in'), 360);
   renderStudy();
 }
 
@@ -740,38 +714,21 @@ $('#knownBtn').addEventListener('click', () => markKnownAndNext());
 
 function markUnknownAndNext() {
   const sess = state.session;
-  if (!sess) return;
+  if (!sess || !sess.revealed) return;
   sess.unknownSet.add(sess.pos);
-  updateUnknownUI();
-  renderSidebar();
   navNext();
 }
 
 function markKnownAndNext() {
   const sess = state.session;
-  if (!sess) return;
+  if (!sess || !sess.revealed) return;
   sess.unknownSet.delete(sess.pos);
-  updateUnknownUI();
-  renderSidebar();
+  sess.knownCount = (sess.knownCount || 0) + 1;
   navNext();
 }
 
 function updateUnknownUI() {
-  const sess = state.session;
-  const isUnknown = sess.unknownSet.has(sess.pos);
-  const btn = $('#unknownBtn');
-  btn.classList.toggle('active-unknown', isUnknown);
-  btn.textContent = isUnknown ? '😕 모르겠음 ✓' : '😕 모르겠음';
-  // 카드에 모르겠음 표시 뱃지
-  let badge = $('#unknownBadge');
-  if (!badge) {
-    badge = document.createElement('div');
-    badge.id = 'unknownBadge';
-    badge.className = 'unknown-badge';
-    $('#flashcard').appendChild(badge);
-  }
-  badge.textContent = '모르겠음';
-  badge.style.display = isUnknown ? '' : 'none';
+  // 버튼 상태만 업데이트 (뱃지는 커버 방식으로 대체됨)
 }
 
 $('#speakBtn').addEventListener('click', speakCurrent);
@@ -789,30 +746,20 @@ function speakCurrent() {
 
 $('#exitStudyBtn').addEventListener('click', () => { showView('home'); renderHome(); });
 
-/* ----- 터치 스와이프 ----- */
-let touchStartX = null, touchStartY = null, touchMoved = false;
-flashcardEl.addEventListener('touchstart', e => {
+/* ----- 터치 스와이프 (답 공개 후에만 동작) ----- */
+let touchStartX = null, touchStartY = null;
+const svCardEl = $('#svCard');
+svCardEl.addEventListener('touchstart', e => {
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
-  touchMoved = false;
 }, { passive: true });
-flashcardEl.addEventListener('touchmove', e => {
-  if (touchStartX === null) return;
-  const dx = e.touches[0].clientX - touchStartX;
-  const dy = e.touches[0].clientY - touchStartY;
-  if (Math.abs(dx) > 10 || Math.abs(dy) > 10) touchMoved = true;
-}, { passive: true });
-flashcardEl.addEventListener('touchend', e => {
+svCardEl.addEventListener('touchend', e => {
   if (touchStartX === null) return;
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
-  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-    e.preventDefault();
-    // 클릭 플립을 막기 위해 약간의 지연
-    flashcardEl.style.pointerEvents = 'none';
-    setTimeout(() => { flashcardEl.style.pointerEvents = ''; }, 50);
-    if (dx < 0) markKnownAndNext();   // 왼쪽 스와이프 → 알겠음
-    else markUnknownAndNext();         // 오른쪽 스와이프 → 모르겠음
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && state.session?.revealed) {
+    if (dx < 0) markKnownAndNext();   // 왼쪽 → 알겠음
+    else markUnknownAndNext();         // 오른쪽 → 모르겠음
   }
   touchStartX = touchStartY = null;
 });
@@ -822,9 +769,13 @@ document.addEventListener('keydown', e => {
   if (state.currentView !== 'study') return;
   if (e.target.matches('input, textarea')) return;
   switch (e.key) {
-    case ' ':          e.preventDefault(); flipCard(); break;
-    case 'ArrowRight': e.preventDefault(); markKnownAndNext(); break;
-    case 'ArrowLeft':  e.preventDefault(); markUnknownAndNext(); break;
+    case ' ':
+      e.preventDefault();
+      if (state.session?.revealed) markUnknownAndNext();  // SPACE → 나중에 한번 더
+      else revealCard();
+      break;
+    case 'ArrowRight': e.preventDefault(); if (state.session?.revealed) markKnownAndNext(); break;
+    case 'ArrowLeft':  e.preventDefault(); if (state.session?.revealed) markUnknownAndNext(); break;
     case '1': setStar(1); break;
     case '2': setStar(2); break;
     case '3': setStar(3); break;
