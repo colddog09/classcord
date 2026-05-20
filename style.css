@@ -897,11 +897,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .nav-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   gap: 8px;
   margin-bottom: 18px;
 }
-.nav-row .btn { flex: 1; }
+.nav-row .btn { min-width: 120px; }
 
 .kbd-hint {
   display: flex;

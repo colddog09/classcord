@@ -671,26 +671,38 @@ function flipCard() {
   $('#flipHint').style.display = 'none';
 }
 
-$('#prevBtn').addEventListener('click', () => navStudy(-1));
-$('#nextBtn').addEventListener('click', () => navStudy(1));
-
-function navStudy(delta) {
+function navNext() {
   const sess = state.session;
-  const newPos = sess.pos + delta;
-  if (newPos < 0) {
-    flashcardEl.animate(
-      [{ transform: 'translateX(0)' }, { transform: 'translateX(-12px)' }, { transform: 'translateX(0)' }],
-      { duration: 220 }
-    );
-    return;
-  }
+  const newPos = sess.pos + 1;
   if (newPos >= sess.cardIdxs.length) {
-    completeSession();
+    // 한 라운드 끝 → 모르겠음 카드가 남아있으면 그것들로 다시 반복
+    const unknownCardIdxs = [...sess.unknownSet].map(pos => sess.cardIdxs[pos]);
+    if (unknownCardIdxs.length > 0) {
+      toast(`😕 ${unknownCardIdxs.length}개 카드 다시 학습합니다`);
+      // unknownSet을 새 세션으로 이어가되, 완료 시 집계를 위해 원본 정보 유지
+      state.session = {
+        setId: sess.setId,
+        allFilteredIdxs: sess.allFilteredIdxs,
+        cardIdxs: unknownCardIdxs,
+        offset: sess.offset,
+        pos: 0,
+        mode: sess.mode,
+        flipped: false,
+        hintShown: false,
+        unknownSet: new Set(),  // 새 라운드는 초기화
+        isRetry: true,
+      };
+      flashcardEl.classList.remove('flipped');
+      flashcardEl.classList.add('swipe-in');
+      setTimeout(() => flashcardEl.classList.remove('swipe-in'), 360);
+      renderStudy();
+    } else {
+      completeSession();
+    }
     return;
   }
   sess.pos = newPos;
   sess.flipped = false;
-  // 전환 애니메이션
   flashcardEl.classList.remove('flipped');
   flashcardEl.classList.add('swipe-in');
   setTimeout(() => flashcardEl.classList.remove('swipe-in'), 360);
@@ -723,27 +735,25 @@ function setStar(v, force = false) {
   renderStudy();
 }
 
-$('#unknownBtn').addEventListener('click', () => toggleUnknown());
-$('#knownBtn').addEventListener('click', () => markKnown());
+$('#unknownBtn').addEventListener('click', () => markUnknownAndNext());
+$('#knownBtn').addEventListener('click', () => markKnownAndNext());
 
-function toggleUnknown() {
+function markUnknownAndNext() {
   const sess = state.session;
   if (!sess) return;
-  if (sess.unknownSet.has(sess.pos)) {
-    sess.unknownSet.delete(sess.pos);
-  } else {
-    sess.unknownSet.add(sess.pos);
-  }
+  sess.unknownSet.add(sess.pos);
   updateUnknownUI();
   renderSidebar();
+  navNext();
 }
 
-function markKnown() {
+function markKnownAndNext() {
   const sess = state.session;
   if (!sess) return;
   sess.unknownSet.delete(sess.pos);
   updateUnknownUI();
   renderSidebar();
+  navNext();
 }
 
 function updateUnknownUI() {
@@ -801,8 +811,8 @@ flashcardEl.addEventListener('touchend', e => {
     // 클릭 플립을 막기 위해 약간의 지연
     flashcardEl.style.pointerEvents = 'none';
     setTimeout(() => { flashcardEl.style.pointerEvents = ''; }, 50);
-    if (dx < 0) navStudy(1);
-    else navStudy(-1);
+    if (dx < 0) markKnownAndNext();   // 왼쪽 스와이프 → 알겠음
+    else markUnknownAndNext();         // 오른쪽 스와이프 → 모르겠음
   }
   touchStartX = touchStartY = null;
 });
@@ -812,9 +822,9 @@ document.addEventListener('keydown', e => {
   if (state.currentView !== 'study') return;
   if (e.target.matches('input, textarea')) return;
   switch (e.key) {
-    case 'ArrowLeft':  e.preventDefault(); navStudy(-1); break;
-    case 'ArrowRight': e.preventDefault(); navStudy(1); break;
     case ' ':          e.preventDefault(); flipCard(); break;
+    case 'ArrowRight': e.preventDefault(); markKnownAndNext(); break;
+    case 'ArrowLeft':  e.preventDefault(); markUnknownAndNext(); break;
     case '1': setStar(1); break;
     case '2': setStar(2); break;
     case '3': setStar(3); break;
