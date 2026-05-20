@@ -1153,20 +1153,30 @@ function toast(msg) {
  * ============================================================ */
 function initFirebase() {
   if (!FIREBASE_CONFIG.apiKey) {
-    console.info('firebase-config.js 없음 → 로컬 전용 모드로 실행');
+    console.info('firebase-config.js 없음 → 로컬 전용 모드');
     return;
   }
   try {
-    firebase.initializeApp(FIREBASE_CONFIG);
-    fbAuth = firebase.auth();
-    fbDb   = firebase.firestore();
+    // 이미 초기화된 경우 재사용
+    const app = firebase.apps.length
+      ? firebase.app()
+      : firebase.initializeApp(FIREBASE_CONFIG);
+
+    fbAuth = firebase.auth(app);
+    fbDb   = firebase.firestore(app);
 
     fbAuth.onAuthStateChanged(user => {
       fbUser = user;
       updateAuthUI();
       if (user) loadFromFirestore();
     });
-  } catch(e) { console.warn('Firebase init failed:', e); }
+
+    console.info('Firebase 초기화 성공');
+  } catch(e) {
+    console.error('Firebase 초기화 실패:', e);
+    fbAuth = null;
+    fbDb   = null;
+  }
 }
 
 function updateAuthUI() {
@@ -1191,7 +1201,7 @@ function updateAuthUI() {
 
 $('#authBtn').addEventListener('click', async () => {
   if (!fbAuth) {
-    toast('⚠ Firebase 설정이 필요합니다. script.js의 FIREBASE_CONFIG를 채워주세요.');
+    toast('⚠ 로그인을 사용할 수 없습니다. 브라우저 콘솔(F12)을 확인해주세요.');
     return;
   }
   if (fbUser) {
