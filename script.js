@@ -1151,13 +1151,13 @@ function toast(msg) {
  * ============================================================ */
 function showLoginScreen() {
   $('#loginScreen').classList.remove('hidden');
-  document.getElementById('appRoot').style.visibility = 'hidden';
-  document.querySelector('.app-header').style.visibility = 'hidden';
+  document.getElementById('appRoot').style.display = 'none';
+  document.querySelector('.app-header').style.display = 'none';
 }
 function hideLoginScreen() {
   $('#loginScreen').classList.add('hidden');
-  document.getElementById('appRoot').style.visibility = '';
-  document.querySelector('.app-header').style.visibility = '';
+  document.getElementById('appRoot').style.display = '';
+  document.querySelector('.app-header').style.display = '';
 }
 
 $('#loginGoogleBtn').addEventListener('click', async () => {
@@ -1172,8 +1172,9 @@ $('#loginGoogleBtn').addEventListener('click', async () => {
 
 function initFirebase() {
   if (!FIREBASE_CONFIG.apiKey) {
-    console.info('firebase-config.js 없음 → 로컬 전용 모드');
-    hideLoginScreen(); // 설정 없으면 그냥 진입 허용
+    console.warn('Firebase 설정 없음 → 로그인 불가');
+    $('#loginGoogleBtn').textContent = '⚠ 설정 오류 — 관리자에게 문의';
+    $('#loginGoogleBtn').disabled = true;
     return;
   }
   try {
@@ -1200,7 +1201,8 @@ function initFirebase() {
     console.error('Firebase 초기화 실패:', e);
     fbAuth = null;
     fbDb   = null;
-    hideLoginScreen();
+    // 초기화 실패 시에도 로그인 화면 유지
+    toast('❌ Firebase 초기화 실패. 새로고침 해주세요.');
   }
 }
 
