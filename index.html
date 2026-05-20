@@ -25,19 +25,42 @@
 
 <!-- HOME VIEW -->
 <section class="view" id="homeView">
-  <div class="view-header">
-    <div class="view-title">내 단어장</div>
-    <div class="view-actions">
-      <button class="btn" id="importJsonBtn"><span>📂</span> JSON 가져오기</button>
-      <button class="btn primary" id="newSetBtn"><span>＋</span> 새 단어장 만들기</button>
+  <div class="home-topbar">
+    <div class="home-topbar-left">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-bar" id="searchInput" placeholder="단어장 검색..." />
+      </div>
+    </div>
+    <div class="home-topbar-right">
+      <button class="btn" id="importJsonBtn">📂 JSON 가져오기</button>
+      <button class="btn ql-primary" id="newSetBtn">＋ 새 단어장</button>
     </div>
   </div>
-  <div class="search-wrap">
-    <span class="search-icon">🔍</span>
-    <input type="text" class="search-bar" id="searchInput" placeholder="단어장 이름으로 검색..." />
-  </div>
-  <div id="setList" class="set-list"></div>
+  <div id="setList" class="ql-set-list"></div>
   <input type="file" id="jsonFileInput" accept=".json" hidden />
+</section>
+
+<!-- SET DETAIL VIEW -->
+<section class="view" id="detailView">
+  <!-- 초록 헤더 배너 -->
+  <div class="detail-banner" id="detailBanner">
+    <button class="detail-back" id="detailBackBtn">‹</button>
+    <div class="detail-badge">단어</div>
+    <h2 class="detail-name" id="detailName"></h2>
+    <div class="detail-meta" id="detailMeta"></div>
+    <div class="detail-actions">
+      <button class="detail-action-btn" data-daction="edit">✎ 편집</button>
+      <button class="detail-action-btn" data-daction="export">⬇ 내보내기</button>
+      <button class="detail-action-btn danger" data-daction="delete">🗑 삭제</button>
+    </div>
+  </div>
+  <!-- 학습 시작 바 -->
+  <div class="detail-study-bar">
+    <button class="ql-study-btn active" id="detailStudyBtn">▶ 학습하기</button>
+  </div>
+  <!-- 카드 그리드 -->
+  <div class="detail-grid" id="detailGrid"></div>
 </section>
 
 <!-- EDIT VIEW -->

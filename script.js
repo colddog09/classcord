@@ -144,45 +144,44 @@ function renderHome() {
   }
 
   list.innerHTML = filtered.map((s, idx) => {
-    const avg   = avgRating(s);
-    const rd    = Math.round(avg);
-    const stars = '★'.repeat(rd) + '☆'.repeat(3 - rd);
-    const stat  = state.stats[s.id] || { sessions: 0, lastDate: null };
-    const open  = state.expandedStats[s.id];
+    const avg  = avgRating(s);
+    const rd   = Math.round(avg);
+    const stars = '★'.repeat(rd);
     return `
-      <div class="set-card" style="--set-color:${escapeHtml(s.themeColor || '#3B82F6')}; animation-delay:${idx * 40}ms;">
-        <div class="set-card-name">${escapeHtml(s.name)}</div>
-        <div class="set-card-meta">
-          <span>📚 ${s.cards.length}개</span>
-          <span class="star">${stars} ${avg.toFixed(1)}</span>
-          <span>🕐 ${formatDate(s.lastStudied)}</span>
-        </div>
-        <div class="set-card-actions">
-          <button class="btn primary sm" data-action="study"  data-id="${s.id}">학습하기</button>
-          <button class="btn sm"         data-action="edit"   data-id="${s.id}">편집</button>
-          <button class="btn danger sm"  data-action="delete" data-id="${s.id}">삭제</button>
-        </div>
-        <div class="stats-toggle ${open ? 'open' : ''}" data-action="toggle-stats" data-id="${s.id}">
-          <span class="caret">▶</span>
-          <span>학습 통계</span>
-        </div>
-        <div class="stats-panel ${open ? 'open' : ''}">
-          <div><div class="stats-panel-inner">
-            <div class="stats-row"><span>총 세션 수</span><span><strong>${stat.sessions}</strong>회</span></div>
-            <div class="stats-row"><span>마지막 학습</span><span>${formatDate(stat.lastDate)}</span></div>
-            <div style="margin-top:10px;">${renderStatBars(s)}</div>
-          </div></div>
-        </div>
+      <div class="ql-set-row" data-action="open-detail" data-id="${s.id}" style="animation-delay:${idx * 30}ms;">
+        <span class="ql-badge">단어</span>
+        <span class="ql-row-name">${escapeHtml(s.name)}</span>
+        <span class="ql-row-count">${s.cards.length} 카드</span>
+        ${stars ? `<span class="ql-row-stars">${stars}</span>` : ''}
+        <span class="ql-row-lock">🔒</span>
+        <span class="ql-row-check"></span>
       </div>
     `;
   }).join('');
+}
 
-  // 통계 바 width 애니메이션 트리거
-  requestAnimationFrame(() => {
-    $$('.stats-bar-fill').forEach(el => {
-      el.style.width = el.dataset.width;
-    });
-  });
+/* ===== SET DETAIL 뷰 ===== */
+function openDetail(id) {
+  const s = getSet(id);
+  if (!s) return;
+  state.currentSetId = id;
+
+  // 배너
+  $('#detailBanner').style.background = s.themeColor || '#8bc34a';
+  $('#detailName').textContent = s.name;
+  $('#detailMeta').textContent = `${s.cards.length} 카드 | ${formatDate(s.lastStudied)}`;
+
+  // 카드 그리드
+  $('#detailGrid').innerHTML = s.cards.map((c, i) => {
+    const starred = (s.starRatings[i] || 0) > 0;
+    return `<div class="detail-card">
+      <span class="detail-card-star ${starred ? 'visible' : ''}">★</span>
+      <div class="detail-card-word">${escapeHtml(c.word || c.meaning)}</div>
+      <div class="detail-card-meaning">${escapeHtml(c.meaning || c.word)}</div>
+    </div>`;
+  }).join('');
+
+  showView('detail');
 }
 
 function renderStatBars(set) {
@@ -210,19 +209,38 @@ $('#newSetBtn').addEventListener('click', () => openEdit(null));
 $('#logoBtn').addEventListener('click', () => { showView('home'); renderHome(); });
 
 $('#setList').addEventListener('click', e => {
-  const btn = e.target.closest('[data-action]');
+  const row = e.target.closest('[data-action="open-detail"]');
+  if (row) { openDetail(row.dataset.id); return; }
+});
+
+// 상세 뷰 버튼들
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-daction]');
   if (!btn) return;
-  const id = btn.dataset.id;
-  switch (btn.dataset.action) {
-    case 'study':         openSetup(id); break;
-    case 'edit':          openEdit(id); break;
-    case 'delete':        confirmDelete(id); break;
-    case 'toggle-stats':
-      state.expandedStats[id] = !state.expandedStats[id];
-      renderHome();
+  const id = state.currentSetId;
+  switch (btn.dataset.daction) {
+    case 'edit':   openEdit(id); break;
+    case 'export': exportSet(id); break;
+    case 'delete':
+      confirmDelete(id);
       break;
   }
 });
+
+$('#detailBackBtn').addEventListener('click', () => { showView('home'); renderHome(); });
+$('#detailStudyBtn').addEventListener('click', () => openSetup(state.currentSetId));
+
+function exportSet(id) {
+  const s = getSet(id);
+  if (!s) return;
+  const data = { name: s.name, themeColor: s.themeColor, cards: s.cards };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = (s.name || 'flashcards') + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
 
 function confirmDelete(id) {
   const s = getSet(id);
@@ -232,6 +250,7 @@ function confirmDelete(id) {
     saveSets();
     delete state.stats[id];
     saveStats();
+    showView('home');
     renderHome();
     toast('🗑 삭제했습니다');
   });
