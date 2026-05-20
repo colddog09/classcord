@@ -149,6 +149,8 @@ function showView(name) {
   $$('.view').forEach(v => v.classList.remove('active'));
   const el = document.getElementById(name + 'View');
   if (el) el.classList.add('active');
+  // 학습 화면에서는 body 스크롤 잠금
+  document.body.style.overflow = (name === 'study') ? 'hidden' : '';
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 

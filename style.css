@@ -1001,7 +1001,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* ===== STUDY VIEW (Quizlet-style) ===== */
 #studyView.active {
   background: #1a1a2e;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1379,6 +1381,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   display: none;
   gap: 0;
   padding: 0 20px;
+  margin-top: -12px;
 }
 .sv-answer-btns.visible { display: flex; }
 .sv-btn-known, .sv-btn-unknown {
