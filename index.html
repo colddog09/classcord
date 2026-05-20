@@ -33,12 +33,12 @@
       </div>
     </div>
     <div class="home-topbar-right">
-      <button class="btn" id="importJsonBtn">📂 JSON 가져오기</button>
+      <button class="btn" id="importCsvBtn">📊 CSV 가져오기</button>
       <button class="btn ql-primary" id="newSetBtn">＋ 새 단어장</button>
     </div>
   </div>
   <div id="setList" class="ql-set-list"></div>
-  <input type="file" id="jsonFileInput" accept=".json" hidden />
+  <input type="file" id="csvFileInput" accept=".csv,text/csv" hidden />
 </section>
 
 <!-- SET DETAIL VIEW -->
@@ -104,18 +104,8 @@
     <span class="card-count" id="cardCount"></span>
   </div>
 
-  <div class="csv-section">
-    <h4>📋 CSV 일괄 입력</h4>
-    <p>한 줄에 한 카드씩: <code>word, phonetic, meaning</code> (헤더가 있으면 자동으로 제외됩니다)</p>
-    <textarea class="csv-textarea" id="csvInput" placeholder="apple, /ˈæp.əl/, 사과&#10;banana, /bəˈnæn.ə/, 바나나"></textarea>
-    <div class="csv-actions">
-      <button class="btn" id="csvImportBtn">CSV 가져오기</button>
-    </div>
-  </div>
-
   <div class="edit-footer">
     <button class="btn primary lg" id="saveSetBtn">💾 저장</button>
-    <button class="btn lg" id="exportJsonBtn">⬇ JSON 내보내기</button>
   </div>
 </section>
 
@@ -179,7 +169,7 @@
       <span class="sv-divider">|</span>
       <span id="totalCount">0</span>
     </div>
-    <button class="sv-speak" id="speakBtn" title="발음">🔊</button>
+    <div style="width:36px;"></div>
   </div>
 
   <!-- 카드 영역 -->
@@ -201,6 +191,11 @@
       <!-- 앞면: 단어 / 뜻 -->
       <div class="sv-front" id="svFront"></div>
 
+      <!-- 스피커 버튼 (중앙) -->
+      <div class="sv-front-speak">
+        <button id="speakBtn" title="발음 듣기">🔊</button>
+      </div>
+
       <!-- 커버 (뒷면 가리개) -->
       <div class="sv-cover" id="svCover">
         <div class="sv-cover-inner">
@@ -211,6 +206,11 @@
 
       <!-- 뒷면: 뜻 / 단어 -->
       <div class="sv-back" id="svBack"></div>
+
+      <!-- 다시 덮기 버튼 -->
+      <div class="sv-recover hidden" id="svRecover">
+        <button id="recoverBtn">↑ 다시 덮기</button>
+      </div>
     </div>
   </div>
 

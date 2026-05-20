@@ -932,15 +932,45 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .sv-known-count::before { content: '✓'; font-size: 16px; }
 .sv-divider { color: #555; font-weight: 400; }
 
-.sv-speak {
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  font-size: 17px;
-  color: #888;
-  display: flex; align-items: center; justify-content: center;
-  transition: background var(--transition), color var(--transition);
+/* 중앙 스피커 버튼 */
+.sv-front-speak {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 14px;
 }
-.sv-speak:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.sv-front-speak #speakBtn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  font-size: 20px;
+  color: #aaa;
+  background: rgba(0,0,0,0.04);
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition), color var(--transition), transform 0.15s;
+  border: 1.5px solid #e0e0e0;
+}
+.sv-front-speak #speakBtn:hover { background: rgba(139,195,74,0.15); color: #8bc34a; transform: scale(1.1); border-color: #8bc34a; }
+
+/* 다시 덮기 버튼 */
+.sv-recover {
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px 6px;
+  border-top: 1px solid #f0f0f0;
+}
+.sv-recover #recoverBtn {
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaa;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1.5px solid #e0e0e0;
+  background: transparent;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.sv-recover #recoverBtn:hover { color: #888; border-color: #ccc; background: rgba(0,0,0,0.04); }
+.sv-recover.hidden { display: none; }
 
 /* 카드 래퍼 */
 .sv-card-wrap {

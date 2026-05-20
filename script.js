@@ -233,13 +233,18 @@ $('#detailStudyBtn').addEventListener('click', () => openSetup(state.currentSetI
 function exportSet(id) {
   const s = getSet(id);
   if (!s) return;
-  const data = { name: s.name, themeColor: s.themeColor, cards: s.cards };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const header = 'word,phonetic,meaning';
+  const rows = s.cards.map(c =>
+    [c.word, c.phonetic, c.meaning].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+  );
+  const csv = [header, ...rows].join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = (s.name || 'flashcards') + '.json';
+  a.href = url; a.download = (s.name || 'flashcards') + '.csv';
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+  toast('⬇ CSV로 내보냈습니다');
 }
 
 function confirmDelete(id) {
@@ -257,48 +262,50 @@ function confirmDelete(id) {
 }
 
 /* ============================================================
- *  JSON 가져오기 / 내보내기
+ *  CSV 가져오기 / 내보내기
  * ============================================================ */
-$('#importJsonBtn').addEventListener('click', () => $('#jsonFileInput').click());
+$('#importCsvBtn').addEventListener('click', () => $('#csvFileInput').click());
 
-$('#jsonFileInput').addEventListener('change', e => {
+$('#csvFileInput').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const data = JSON.parse(reader.result);
-      const items = Array.isArray(data) ? data : [data];
-      let added = 0;
-      for (const it of items) {
-        if (!it.name || !Array.isArray(it.cards)) continue;
-        state.sets.push({
-          id: uid(),
-          name: it.name,
-          themeColor: it.themeColor || '#3B82F6',
-          lastStudied: it.lastStudied || null,
-          starRatings: it.starRatings || {},
-          cards: it.cards.map(c => ({
-            word:     c.word     || '',
-            phonetic: c.phonetic || '',
-            meaning:  c.meaning  || '',
-          })),
-        });
-        added++;
+      const lines = reader.result.split(/\r?\n/).filter(l => l.trim());
+      if (!lines.length) { toast('⚠ 파일이 비어 있습니다'); return; }
+
+      // 헤더 행 감지 (첫 셀이 'word' 또는 '단어'면 건너뜀)
+      let startIdx = 0;
+      const firstCell = lines[0].split(',')[0].trim().toLowerCase();
+      if (firstCell === 'word' || firstCell === '단어') startIdx = 1;
+
+      const rows = lines.slice(startIdx).map(l => l.split(',').map(c => c.trim()));
+      const cards = [];
+      for (const [w, p, m] of rows) {
+        if (!w) continue;
+        cards.push({ word: w, phonetic: p || '', meaning: m || '' });
       }
-      if (added) {
-        saveSets();
-        renderHome();
-        toast(`✅ ${added}개 단어장을 가져왔습니다`);
-      } else {
-        toast('⚠ 가져올 수 있는 단어장이 없습니다');
-      }
+      if (!cards.length) { toast('⚠ 유효한 카드가 없습니다'); return; }
+
+      const setName = file.name.replace(/\.csv$/i, '');
+      state.sets.push({
+        id: uid(),
+        name: setName,
+        themeColor: '#3B82F6',
+        lastStudied: null,
+        starRatings: {},
+        cards,
+      });
+      saveSets();
+      renderHome();
+      toast(`✅ "${setName}" (${cards.length}개 카드) 가져왔습니다`);
     } catch {
-      toast('❌ JSON 파일을 읽을 수 없습니다');
+      toast('❌ CSV 파일을 읽을 수 없습니다');
     }
     e.target.value = '';
   };
-  reader.readAsText(file);
+  reader.readAsText(file, 'UTF-8');
 });
 
 /* ============================================================
@@ -325,7 +332,6 @@ function openEdit(id) {
   $('#editColorInput').value = state.editDraft.themeColor || '#3B82F6';
   syncColorPreview();
   renderEditTable();
-  $('#csvInput').value = '';
   showView('edit');
 }
 
@@ -407,33 +413,6 @@ $('#addRowBtn').addEventListener('click', () => {
   }
 });
 
-$('#csvImportBtn').addEventListener('click', () => {
-  const raw = $('#csvInput').value.trim();
-  if (!raw) { toast('⚠ CSV 내용이 비어 있습니다'); return; }
-  const lines = raw.split(/\r?\n/).filter(l => l.trim());
-  let rows = lines.map(l => l.split(',').map(c => c.trim()));
-  if (rows.length && rows[0][0] && rows[0][0].toLowerCase() === 'word') rows.shift();
-
-  // 빈 placeholder 카드 1개만 있으면 제거
-  if (state.editDraft.cards.length === 1) {
-    const only = state.editDraft.cards[0];
-    if (!only.word && !only.phonetic && !only.meaning) state.editDraft.cards = [];
-  }
-
-  let added = 0;
-  for (const [w, p, m] of rows) {
-    if (!w) continue;
-    state.editDraft.cards.push({ word: w, phonetic: p || '', meaning: m || '' });
-    added++;
-  }
-  if (!state.editDraft.cards.length) {
-    state.editDraft.cards.push({ word: '', phonetic: '', meaning: '' });
-  }
-  renderEditTable();
-  $('#csvInput').value = '';
-  toast(added ? `✅ ${added}개 카드를 추가했습니다` : '⚠ 유효한 행이 없습니다');
-});
-
 $('#saveSetBtn').addEventListener('click', () => {
   const draft = state.editDraft;
   if (!draft.name.trim()) { toast('⚠ 단어장 이름을 입력해 주세요'); $('#editNameInput').focus(); return; }
@@ -456,24 +435,6 @@ $('#saveSetBtn').addEventListener('click', () => {
   renderHome();
 });
 
-$('#exportJsonBtn').addEventListener('click', () => {
-  const draft = state.editDraft;
-  const data = {
-    name: draft.name || 'flashcards',
-    themeColor: draft.themeColor,
-    cards: draft.cards.filter(c => c.word.trim() || c.meaning.trim()),
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (data.name || 'flashcards') + '.json';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-  toast('⬇ 다운로드했습니다');
-});
 
 /* ============================================================
  *  SETUP 뷰
@@ -643,6 +604,7 @@ function renderStudy() {
   sess.revealed = false;
   $('#svCover').classList.remove('hidden');
   $('#svBack').classList.remove('visible');
+  $('#svRecover').classList.add('hidden');
   $('#answerBtns').classList.remove('visible');
   $('#kbdRow').classList.add('hidden');
 
@@ -660,11 +622,35 @@ function revealCard() {
   sess.revealed = true;
   $('#svCover').classList.add('hidden');
   $('#svBack').classList.add('visible');
+  $('#svRecover').classList.remove('hidden');
   $('#answerBtns').classList.add('visible');
   $('#kbdRow').classList.remove('hidden');
+  // 커버 걷힐 때 자동 음성
+  speakCurrent();
 }
 
-$('#svCard').addEventListener('click', () => revealCard());
+// 다시 덮기
+function recoverCard() {
+  const sess = state.session;
+  if (!sess || !sess.revealed) return;
+  sess.revealed = false;
+  $('#svCover').classList.remove('hidden');
+  $('#svBack').classList.remove('visible');
+  $('#svRecover').classList.add('hidden');
+  $('#answerBtns').classList.remove('visible');
+  $('#kbdRow').classList.add('hidden');
+}
+
+$('#svCard').addEventListener('click', e => {
+  // speakBtn, recoverBtn 클릭은 카드 클릭으로 처리 안 함
+  if (e.target.closest('#speakBtn') || e.target.closest('#recoverBtn')) return;
+  revealCard();
+});
+
+$('#recoverBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  recoverCard();
+});
 
 function navNext() {
   const sess = state.session;
@@ -748,7 +734,7 @@ function updateUnknownUI() {
   // 버튼 상태만 업데이트 (뱃지는 커버 방식으로 대체됨)
 }
 
-$('#speakBtn').addEventListener('click', speakCurrent);
+$('#speakBtn').addEventListener('click', e => { e.stopPropagation(); speakCurrent(); });
 
 function speakCurrent() {
   const sess = state.session;
