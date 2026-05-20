@@ -199,13 +199,16 @@ function openDetail(id) {
   $('#detailName').textContent = s.name;
   $('#detailMeta').textContent = `${s.cards.length} 카드 | ${formatDate(s.lastStudied)}`;
   $('#detailGrid').innerHTML = s.cards.map((c, i) => {
-    const starred = (s.starRatings[i] || 0) > 0;
-    return `<div class="detail-card" data-flipped="false">
+    const rating = s.starRatings[i] || 0;
+    const stars = [1,2,3].map(n =>
+      `<button class="dc-star-btn ${n <= rating ? 'filled' : ''}" data-card-idx="${i}" data-star="${n}" title="${n}★">★</button>`
+    ).join('');
+    return `<div class="detail-card" data-idx="${i}" data-flipped="false">
       <div class="detail-card-inner">
         <div class="detail-card-front">
-          <span class="detail-card-star ${starred ? 'visible' : ''}">★</span>
           <div class="detail-card-word">${escapeHtml(c.word || c.meaning)}</div>
           ${c.phonetic ? `<div class="detail-card-phonetic">${escapeHtml(c.phonetic)}</div>` : ''}
+          <div class="dc-stars">${stars}</div>
         </div>
         <div class="detail-card-back">
           <div class="detail-card-meaning">${escapeHtml(c.meaning || c.word)}</div>
@@ -215,6 +218,23 @@ function openDetail(id) {
   }).join('');
 
   $('#detailGrid').addEventListener('click', e => {
+    // 별점 버튼 클릭
+    const starBtn = e.target.closest('.dc-star-btn');
+    if (starBtn) {
+      e.stopPropagation();
+      const idx  = parseInt(starBtn.dataset.cardIdx, 10);
+      const val  = parseInt(starBtn.dataset.star, 10);
+      const cur  = s.starRatings[idx] || 0;
+      s.starRatings[idx] = (cur === val) ? 0 : val; // 같은 별 다시 클릭 → 해제
+      saveSets();
+      // 해당 카드 별점만 업데이트
+      const card = starBtn.closest('.detail-card');
+      card.querySelectorAll('.dc-star-btn').forEach(b => {
+        b.classList.toggle('filled', parseInt(b.dataset.star) <= (s.starRatings[idx] || 0));
+      });
+      return;
+    }
+    // 카드 뒤집기
     const card = e.target.closest('.detail-card');
     if (!card) return;
     const flipped = card.dataset.flipped === 'true';
