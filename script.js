@@ -90,12 +90,28 @@ async function syncToFirestore() {
   try {
     const batch = fbDb.batch();
     const base = fbDb.collection('users').doc(fbUser.uid).collection('sets');
-    // 현재 sets 업서트
     for (const s of state.sets) {
       batch.set(base.doc(s.id), s);
     }
     await batch.commit();
+    const now = Date.now();
+    localStorage.setItem('flashcard.lastSync.v1', String(now));
+    renderSyncTime(now);
   } catch(e) { console.warn('Firestore sync failed:', e); }
+}
+
+function renderSyncTime(ts) {
+  const el = $('#syncTimeLabel');
+  if (!el) return;
+  if (!ts) { el.textContent = ''; return; }
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  let label;
+  if (diff < 10)       label = '방금 동기화됨';
+  else if (diff < 60)  label = `${diff}초 전 동기화`;
+  else if (diff < 3600) label = `${Math.floor(diff/60)}분 전 동기화`;
+  else if (diff < 86400) label = `${Math.floor(diff/3600)}시간 전 동기화`;
+  else                 label = `${Math.floor(diff/86400)}일 전 동기화`;
+  el.textContent = '☁ ' + label;
 }
 
 async function deleteFromFirestore(id) {
@@ -158,6 +174,8 @@ function showView(name) {
  *  HOME 뷰
  * ============================================================ */
 function renderHome() {
+  const lastSync = parseInt(localStorage.getItem('flashcard.lastSync.v1') || '0', 10);
+  renderSyncTime(lastSync || null);
   const list = $('#setList');
   if (!state.sets.length) {
     list.innerHTML = `<div class="empty-state">

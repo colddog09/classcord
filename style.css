@@ -2121,3 +2121,12 @@ kbd {
   color: var(--text);
   border-color: var(--border);
 }
+
+/* 동기화 시간 라벨 */
+.sync-time-label {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 12px 0 20px;
+  opacity: 0.7;
+}
