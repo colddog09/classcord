@@ -503,21 +503,35 @@ $('#csvFileInput').addEventListener('change', e => {
     try {
       const lines = reader.result.split(/\r?\n/).filter(l => l.trim());
       if (!lines.length) { toast('⚠ 파일이 비어 있습니다'); return; }
-      let startIdx = 0;
-      const firstCell = lines[0].split(',')[0].trim().toLowerCase();
-      if (firstCell === 'word' || firstCell === '단어') startIdx = 1;
+
+      // 헤더 감지: front,back → 역사 세트 / word,phonetic,meaning → 단어 세트
+      const firstCell = lines[0].split(',')[0].trim().replace(/^"|"$/g, '').toLowerCase();
+      const isHistoryCsv = firstCell === 'front' || firstCell === '앞면';
+      const isVocabHeader = firstCell === 'word' || firstCell === '단어' || isHistoryCsv;
+      const startIdx = isVocabHeader ? 1 : 0;
+      const setType  = isHistoryCsv ? 'history' : 'vocab';
+
       const cards = [];
       for (const line of lines.slice(startIdx)) {
-        const [w, p, m] = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-        if (w) cards.push({ word: w, phonetic: p || '', meaning: m || '' });
+        // CSV 파싱: 따옴표 안의 쉼표 처리
+        const cols = line.match(/("([^"]*(?:""[^"]*)*)"|[^,]*)/g)
+          ?.map(c => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"')) || [];
+        if (isHistoryCsv) {
+          const [f, b] = cols;
+          if (f) cards.push({ word: f, phonetic: '', meaning: b || '' });
+        } else {
+          const [w, p, m] = cols;
+          if (w) cards.push({ word: w, phonetic: p || '', meaning: m || '' });
+        }
       }
       if (!cards.length) { toast('⚠ 유효한 카드가 없습니다'); return; }
       const setName = file.name.replace(/\.csv$/i, '');
-      state.sets.push({ id: uid(), name: setName, themeColor: '#3B82F6', lastStudied: null, starRatings: {}, cards });
+      const themeColor = isHistoryCsv ? '#8B5CF6' : '#3B82F6'; // 역사 세트는 보라색
+      state.sets.push({ id: uid(), name: setName, type: setType, themeColor, lastStudied: null, starRatings: {}, cards });
       saveSets();
       renderHome();
       toast(`✅ "${setName}" (${cards.length}개 카드) 가져왔습니다`);
-    } catch { toast('❌ CSV 파일을 읽을 수 없습니다'); }
+    } catch(err) { console.error(err); toast('❌ CSV 파일을 읽을 수 없습니다'); }
     e.target.value = '';
   };
   reader.readAsText(file, 'UTF-8');
