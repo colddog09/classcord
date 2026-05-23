@@ -1085,11 +1085,12 @@ document.addEventListener('keydown', e => {
   switch (e.key) {
     case ' ':
       e.preventDefault();
-      if (state.session?.revealed) markUnknownAndNext();
-      else revealCard();
+      if (state.session?.revealed) recoverCard(); else revealCard();
       break;
-    case 'ArrowRight': e.preventDefault(); swipeCard('right'); break; // 다음
-    case 'ArrowLeft':  e.preventDefault(); swipeCard('left');  break; // 이전
+    case 'ArrowDown': e.preventDefault(); revealCard();   break; // 커버 내리기
+    case 'ArrowUp':   e.preventDefault(); recoverCard();  break; // 커버 올리기
+    case 'ArrowRight': e.preventDefault(); swipeCard('right'); break; // 다음 카드
+    case 'ArrowLeft':  e.preventDefault(); swipeCard('left');  break; // 이전 카드
     case '1': setStar(1); break;
     case '2': setStar(2); break;
     case '3': setStar(3); break;
