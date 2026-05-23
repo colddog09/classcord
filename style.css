@@ -1007,7 +1007,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 0 max(20px, env(safe-area-inset-bottom));
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -1073,12 +1073,13 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .sv-card-wrap {
   width: 100%;
   max-width: 760px;
-  padding: 0 20px 44px;
+  padding: 0 20px;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: stretch;
   overflow: hidden;
 }
 
@@ -1123,10 +1124,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   display: flex;
   flex-direction: column;
-  min-height: 420px;
+  min-height: 360px;
+  max-height: 70vh;
   position: relative;
   cursor: pointer;
   user-select: none;
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.25s;
 }
 [data-theme="dark"] .sv-card { background: #fff; color: #1a1a1a; }
 
@@ -1207,11 +1210,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 /* 앞면 (단어) */
 .sv-front {
-  padding: 32px 28px 20px;
-  min-height: 160px;
+  padding: 24px 28px 16px;
+  min-height: 120px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 .sv-word {
   font-size: clamp(28px, 5vw, 48px);
@@ -1376,6 +1379,77 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-family: 'Inter', monospace;
 }
 
+/* 답 확인 버튼 */
+.sv-answer-btns { display: none !important; }
+.sv-kbd-row { display: none !important; }
+.sv-btn-known, .sv-btn-unknown {
+  flex: 1;
+  padding: 18px 12px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--font);
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.sv-btn-known {
+  background: #8bc34a;
+  color: #fff;
+  border-radius: 12px 0 0 12px;
+}
+.sv-btn-known:hover { filter: brightness(1.08); }
+.sv-btn-unknown {
+  background: #fff;
+  color: #1a1a1a;
+  border-radius: 0 12px 12px 0;
+  border: 2px solid #e0e0e0;
+  border-left: none;
+}
+.sv-btn-unknown:hover { background: #f5f5f5; }
+
+/* 키보드 힌트 */
+.sv-kbd-row {
+  display: flex;
+  width: 100%;
+  max-width: 760px;
+  padding: 8px 20px 12px;
+  flex-shrink: 0;
+}
+.sv-kbd-row span {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sv-kbd-row.hidden { visibility: hidden; }
+
+/* 스와이프 힌트 */
+.sv-swipe-hint {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 760px;
+  padding: 10px 28px 0;
+  flex-shrink: 0;
+}
+.sv-swipe-hint span {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.04em;
+}
+/* 카드 스와이프 아웃 애니메이션 */
+.sv-card.swipe-left {
+  transform: translateX(-120%) rotate(-8deg);
+  opacity: 0;
+}
+.sv-card.swipe-right {
+  transform: translateX(120%) rotate(8deg);
+  opacity: 0;
+}
 
 /* ===== OLD STUDY VIEW LAYOUT (keep for sidebar ref) ===== */
 .study-layout {
