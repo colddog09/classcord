@@ -101,6 +101,7 @@
     <div class="option-row" id="setTypeChips">
       <button class="option-chip active" data-type="vocab">📚 단어 암기 <small>단어·발음·뜻</small></button>
       <button class="option-chip" data-type="history">🏛 역사·암기 <small>앞면·뒷면</small></button>
+      <button class="option-chip" data-type="quiz">🧩 객관식 퀴즈 <small>4지선다</small></button>
     </div>
   </div>
 
@@ -131,6 +132,15 @@
   <div class="add-row-wrap">
     <button class="btn" id="addRowBtn">＋ 카드 추가</button>
     <span class="card-count" id="cardCount"></span>
+  </div>
+
+  <!-- 퀴즈 전용 편집기 (퀴즈 세트일 때만 표시) -->
+  <div id="quizEditor" style="display:none">
+    <div id="quizCardList"></div>
+    <div class="add-row-wrap">
+      <button class="btn" id="addQuizCardBtn">＋ 퀴즈 추가</button>
+      <span class="card-count" id="quizCardCount"></span>
+    </div>
   </div>
 
   <div class="edit-footer">

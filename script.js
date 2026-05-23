@@ -189,10 +189,10 @@ function renderHome() {
     const avg = avgRating(s);
     const rd  = Math.round(avg);
     const stars = '★'.repeat(rd);
-    const badge = s.type === 'history' ? '역사' : '단어';
+    const badge = s.type === 'history' ? '역사' : s.type === 'quiz' ? '퀴즈' : '단어';
     return `
       <div class="ql-set-row" data-action="open-detail" data-id="${s.id}" style="animation-delay:${idx*30}ms;">
-        <span class="ql-badge">${badge}</span>
+        <span class="ql-badge" data-badge="${s.type || 'vocab'}">${badge}</span>
         <span class="ql-row-name">${escapeHtml(s.name)}</span>
         <span class="ql-row-count">${s.cards.length} 카드</span>
         ${stars ? `<span class="ql-row-stars">${stars}</span>` : ''}
@@ -219,13 +219,40 @@ function openDetail(id) {
   $('#detailBanner').style.background = s.themeColor || '#8bc34a';
   $('#detailName').textContent = s.name;
   $('#detailMeta').textContent = `${s.cards.length} 카드 | ${formatDate(s.lastStudied)}`;
-  document.querySelector('.detail-badge').textContent = s.type === 'history' ? '역사' : '단어';
+  const setTypeName = s.type === 'history' ? '역사' : s.type === 'quiz' ? '퀴즈' : '단어';
+  document.querySelector('.detail-badge').textContent = setTypeName;
   const isHistory = (s.type || 'vocab') === 'history';
+  const isQuiz    = (s.type || 'vocab') === 'quiz';
+  const OPT_LABELS = ['A','B','C','D'];
+
   $('#detailGrid').innerHTML = s.cards.map((c, i) => {
     const rating = s.starRatings[i] || 0;
     const stars = [1,2,3].map(n =>
       `<button class="dc-star-btn ${n <= rating ? 'filled' : ''}" data-card-idx="${i}" data-star="${n}" title="${n}★">★</button>`
     ).join('');
+
+    if (isQuiz) {
+      const opts = c.options || ['','','',''];
+      const correctIdx = c.correct ?? 0;
+      const optsList = opts.map((opt, oi) => opt
+        ? `<div class="dq-opt ${oi === correctIdx ? 'correct' : ''}">${OPT_LABELS[oi]}. ${escapeHtml(opt)}</div>`
+        : ''
+      ).join('');
+      return `<div class="detail-card" data-idx="${i}" data-flipped="false">
+        <div class="detail-card-inner">
+          <div class="detail-card-front" style="align-items:flex-start">
+            <div class="dq-badge">Q${i+1}</div>
+            <div class="detail-card-word" style="font-size:13px;font-weight:600;text-align:left;line-height:1.5">${escapeHtml(c.word)}</div>
+            <div class="dc-stars" style="margin-top:auto">${stars}</div>
+          </div>
+          <div class="detail-card-back" style="align-items:flex-start;padding:10px 12px">
+            <div class="dq-opts-list">${optsList}</div>
+            ${c.meaning ? `<div class="dq-explain-back">${escapeHtml(c.meaning)}</div>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }
+
     return `<div class="detail-card" data-idx="${i}" data-flipped="false">
       <div class="detail-card-inner">
         <div class="detail-card-front">
@@ -554,6 +581,13 @@ function openEdit(id) {
     };
     $('#editTitle').textContent = '새 단어장';
   }
+  // 퀴즈 세트 기존 카드에 options/correct 필드 보장
+  if (state.editDraft.type === 'quiz') {
+    state.editDraft.cards = state.editDraft.cards.map(c => ({
+      word: c.word || '', phonetic: '', meaning: c.meaning || '',
+      options: c.options || ['','','',''], correct: c.correct ?? 0,
+    }));
+  }
   $('#editNameInput').value  = state.editDraft.name;
   $('#editColorInput').value = state.editDraft.themeColor || '#3B82F6';
   syncColorPreview();
@@ -565,10 +599,19 @@ function openEdit(id) {
 function applySetType(type) {
   state.editDraft.type = type;
   const isHistory = type === 'history';
+  const isQuiz    = type === 'quiz';
   // 칩 활성화
   $$('#setTypeChips .option-chip').forEach(c =>
     c.classList.toggle('active', c.dataset.type === type)
   );
+  // 테이블 vs 퀴즈 에디터 전환
+  const tableWrap  = $('.cards-table-wrap');
+  const addRowWrap = $('.add-row-wrap');
+  const quizEditor = $('#quizEditor');
+  if (tableWrap)  tableWrap.style.display  = isQuiz ? 'none' : '';
+  if (addRowWrap) addRowWrap.style.display = isQuiz ? 'none' : '';
+  if (quizEditor) quizEditor.style.display = isQuiz ? ''     : 'none';
+  if (isQuiz) { renderQuizEditor(); return; }
   // 테이블 헤더 변경
   $('#thWord').textContent    = isHistory ? '앞면 (용어·사건)' : '단어';
   $('#thMeaning').textContent = isHistory ? '뒷면 (설명·내용)' : '뜻';
@@ -585,7 +628,92 @@ $('#setTypeChips').addEventListener('click', e => {
   const chip = e.target.closest('[data-type]');
   if (!chip) return;
   applySetType(chip.dataset.type);
-  renderEditTable();
+  if (chip.dataset.type !== 'quiz') renderEditTable();
+});
+
+/* ============================================================
+ *  퀴즈 에디터
+ * ============================================================ */
+const QUIZ_LABELS = ['A', 'B', 'C', 'D'];
+
+function renderQuizEditor() {
+  const list = $('#quizCardList');
+  if (!list || !state.editDraft) return;
+  const cards = state.editDraft.cards;
+  list.innerHTML = cards.map((c, i) => {
+    const opts    = c.options || ['','','',''];
+    const correct = c.correct ?? 0;
+    return `
+      <div class="quiz-edit-card" data-idx="${i}">
+        <div class="quiz-edit-header">
+          <span class="quiz-edit-num">Q${i + 1}</span>
+          <button class="btn danger sm" data-qaction="delete" title="삭제">🗑</button>
+        </div>
+        <label class="quiz-field-label">문제</label>
+        <textarea data-qfield="word" placeholder="문제를 입력하세요" rows="2">${escapeHtml(c.word || '')}</textarea>
+        <label class="quiz-field-label">보기 <span style="font-weight:400;color:var(--text-muted)">(정답 버튼 클릭 → 초록)</span></label>
+        <div class="quiz-opt-rows">
+          ${opts.map((opt, oi) => `
+            <div class="quiz-opt-row">
+              <button class="quiz-correct-btn ${oi === correct ? 'active' : ''}" data-qaction="set-correct" data-oi="${oi}" title="${QUIZ_LABELS[oi]}번이 정답">${QUIZ_LABELS[oi]}</button>
+              <input type="text" data-qfield="opt${oi}" placeholder="보기 ${QUIZ_LABELS[oi]}" value="${escapeHtml(opt)}" />
+            </div>
+          `).join('')}
+        </div>
+        <label class="quiz-field-label">해설 <span style="font-weight:400">(선택)</span></label>
+        <input type="text" class="quiz-text-input" data-qfield="meaning" placeholder="정답 해설 (선택사항)" value="${escapeHtml(c.meaning || '')}" />
+      </div>`;
+  }).join('');
+  $('#quizCardCount').textContent = `총 ${cards.length}개 퀴즈`;
+}
+
+$('#quizCardList').addEventListener('input', e => {
+  const cardEl = e.target.closest('[data-idx]');
+  if (!cardEl || !state.editDraft) return;
+  const idx   = parseInt(cardEl.dataset.idx, 10);
+  const field = e.target.dataset.qfield;
+  if (!field || !state.editDraft.cards[idx]) return;
+  if (field === 'word' || field === 'meaning') {
+    state.editDraft.cards[idx][field] = e.target.value;
+  } else if (field.startsWith('opt')) {
+    const oi = parseInt(field.slice(3), 10);
+    if (!state.editDraft.cards[idx].options) state.editDraft.cards[idx].options = ['','','',''];
+    state.editDraft.cards[idx].options[oi] = e.target.value;
+  }
+});
+
+$('#quizCardList').addEventListener('click', e => {
+  const cardEl = e.target.closest('[data-idx]');
+  if (!cardEl || !state.editDraft) return;
+  const idx = parseInt(cardEl.dataset.idx, 10);
+  const btn = e.target.closest('[data-qaction]');
+  if (!btn) return;
+  if (btn.dataset.qaction === 'delete') {
+    cardEl.classList.add('removing');
+    setTimeout(() => {
+      state.editDraft.cards.splice(idx, 1);
+      if (!state.editDraft.cards.length)
+        state.editDraft.cards.push({ word:'', phonetic:'', meaning:'', options:['','','',''], correct:0 });
+      renderQuizEditor();
+    }, 230);
+  } else if (btn.dataset.qaction === 'set-correct') {
+    const oi = parseInt(btn.dataset.oi, 10);
+    state.editDraft.cards[idx].correct = oi;
+    cardEl.querySelectorAll('.quiz-correct-btn').forEach((b, bi) =>
+      b.classList.toggle('active', bi === oi)
+    );
+  }
+});
+
+$('#addQuizCardBtn').addEventListener('click', () => {
+  state.editDraft.cards.push({ word:'', phonetic:'', meaning:'', options:['','','',''], correct:0 });
+  renderQuizEditor();
+  const last = $('#quizCardList').lastElementChild;
+  if (last) {
+    last.scrollIntoView({ behavior:'smooth', block:'center' });
+    const ta = last.querySelector('textarea');
+    if (ta) setTimeout(() => ta.focus(), 300);
+  }
 });
 
 function syncColorPreview() {
@@ -593,6 +721,10 @@ function syncColorPreview() {
 }
 
 function renderEditTable() {
+  if ((state.editDraft?.type || 'vocab') === 'quiz') {
+    if (state.editDraft) applySetType('quiz');
+    return;
+  }
   const tbody = $('#editTableBody');
   const isHistory = (state.editDraft?.type || 'vocab') === 'history';
   const wordPh    = isHistory ? '앞면 (용어·사건)' : '단어';
@@ -664,8 +796,17 @@ $('#addRowBtn').addEventListener('click', () => {
 $('#saveSetBtn').addEventListener('click', () => {
   const draft = state.editDraft;
   if (!draft.name.trim()) { toast('⚠ 단어장 이름을 입력해 주세요'); $('#editNameInput').focus(); return; }
-  const valid = draft.cards.filter(c => c.word.trim() || c.meaning.trim());
-  if (!valid.length) { toast('⚠ 최소 1개의 카드가 필요합니다'); return; }
+  let valid;
+  if (draft.type === 'quiz') {
+    valid = draft.cards.filter(c => c.word.trim());
+    if (!valid.length) { toast('⚠ 최소 1개의 퀴즈가 필요합니다'); return; }
+    valid = valid.map(c => ({
+      ...c, options: c.options || ['','','',''], correct: c.correct ?? 0,
+    }));
+  } else {
+    valid = draft.cards.filter(c => c.word.trim() || c.meaning.trim());
+    if (!valid.length) { toast('⚠ 최소 1개의 카드가 필요합니다'); return; }
+  }
   draft.cards = valid;
   const cleanRatings = {};
   for (const k in draft.starRatings) {
@@ -688,7 +829,11 @@ function openSetup(id) {
   state.currentSetId = id;
   const s = getSet(id);
   const isHistory = (s.type || 'vocab') === 'history';
+  const isQuizSet = (s.type || 'vocab') === 'quiz';
   $('#setupTitle').textContent = s.name + ' — 학습 설정';
+  // 퀴즈는 모드 선택 불필요
+  const modeGroup = $('#modeChips').closest('.option-group');
+  if (modeGroup) modeGroup.classList.toggle('setup-mode-hidden', isQuizSet);
   // 모드 칩 레이블 업데이트 (역사 세트)
   const [wordChip, meaningChip] = $$('#modeChips .option-chip');
   if (isHistory) {
@@ -811,9 +956,10 @@ function renderStudy() {
   const cardIdx = sess.cardIdxs[sess.pos];
   const card    = set.cards[cardIdx];
 
-  const knownN = sess.knownCount || 0;
-  const totalN = sess.cardIdxs.length;
+  const knownN    = sess.knownCount || 0;
+  const totalN    = sess.cardIdxs.length;
   const isHistory = (set.type || 'vocab') === 'history';
+  const isQuiz    = (set.type || 'vocab') === 'quiz';
   $('#knownCount').textContent = knownN;
   $('#totalCount').textContent = totalN;
   if (isHistory) {
@@ -826,34 +972,59 @@ function renderStudy() {
   $('#svCardProgressFill').style.width = pct + '%';
   $('#svCardProgressLabel').textContent = `${knownN} / ${totalN} 학습 완료`;
 
-  // 스피커 버튼 — 역사 세트는 TTS 불필요
-  $('#speakBtn').style.display = isHistory ? 'none' : '';
+  // 스피커 버튼 — 역사·퀴즈 세트는 TTS 불필요
+  $('#speakBtn').style.display = (isHistory || isQuiz) ? 'none' : '';
 
-  // 앞면
   const front = $('#svFront');
-  if (sess.mode === 'word') {
-    front.innerHTML = `<div class="sv-word">${escapeHtml(card.word)}</div>` +
-      (!isHistory && card.phonetic ? `<div class="sv-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
-  } else {
-    front.innerHTML = `<div class="sv-meaning-front">${escapeHtml(card.meaning)}</div>`;
-  }
+  const back  = $('#svBack');
 
-  // 뒷면 (항상 렌더링 - 커버 아래에 깔림)
-  const back = $('#svBack');
-  if (sess.mode === 'word') {
-    back.innerHTML = `<div class="sv-meaning">${escapeHtml(card.meaning)}</div>`;
+  if (isQuiz) {
+    /* ── 퀴즈 모드 ── */
+    $('#modeBadge').textContent = '퀴즈';
+    front.innerHTML = `<div class="sv-quiz-question">${escapeHtml(card.word)}</div>`;
+    const opts = card.options || ['','','',''];
+    back.innerHTML = `
+      <div class="quiz-opts-grid" id="quizOptsGrid">
+        ${opts.map((opt, oi) => `
+          <button class="qopt" data-qi="${oi}">
+            <span class="qopt-lbl">${QUIZ_LABELS[oi]}</span>
+            <span>${escapeHtml(opt)}</span>
+          </button>`).join('')}
+      </div>
+      ${card.meaning ? `<div class="quiz-explain" id="quizExplain" style="display:none">${escapeHtml(card.meaning)}</div>` : ''}
+    `;
+    // 커버 완전 숨기기
+    svCoverEl.style.transition = 'none';
+    svCoverEl.style.transform  = 'translateY(-200%)';
+    svCoverEl.style.pointerEvents = 'none';
+    sess.revealed = false;
+    $('#answerBtns').classList.remove('visible');
+    $('#kbdRow').classList.add('hidden');
   } else {
-    back.innerHTML = `<div class="sv-back-word">${escapeHtml(card.word)}</div>` +
-      (!isHistory && card.phonetic ? `<div class="sv-back-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
+    /* ── 플래시카드 모드 ── */
+    // 앞면
+    if (sess.mode === 'word') {
+      front.innerHTML = `<div class="sv-word">${escapeHtml(card.word)}</div>` +
+        (!isHistory && card.phonetic ? `<div class="sv-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
+    } else {
+      front.innerHTML = `<div class="sv-meaning-front">${escapeHtml(card.meaning)}</div>`;
+    }
+    // 뒷면
+    if (sess.mode === 'word') {
+      back.innerHTML = `<div class="sv-meaning">${escapeHtml(card.meaning)}</div>`;
+    } else {
+      back.innerHTML = `<div class="sv-back-word">${escapeHtml(card.word)}</div>` +
+        (!isHistory && card.phonetic ? `<div class="sv-back-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
+    }
+    // 커버 초기화
+    svCoverEl.style.pointerEvents = '';
+    sess.revealed = false;
+    svCoverEl.style.transition = 'none';
+    svCoverEl.style.transform  = 'translateY(0)';
+    svCoverEl.classList.remove('hidden');
+    $('#answerBtns').classList.remove('visible');
+    $('#kbdRow').classList.add('hidden');
   }
-
-  // 커버 초기화 (새 카드 → 완전히 덮기)
-  sess.revealed = false;
-  svCoverEl.style.transition = 'none';
-  svCoverEl.style.transform  = 'translateY(0)';
-  svCoverEl.classList.remove('hidden');
-  $('#answerBtns').classList.remove('visible');
-  $('#kbdRow').classList.add('hidden');
 
   // 별점
   const star = set.starRatings[cardIdx] || 0;
@@ -1100,9 +1271,78 @@ if (window.speechSynthesis) {
 function speakCurrent() {
   const sess = state.session; if (!sess) return;
   const set  = getSet(sess.setId);
-  if ((set.type || 'vocab') === 'history') return; // 역사 세트는 TTS 없음
+  const t    = set.type || 'vocab';
+  if (t === 'history' || t === 'quiz') return; // 역사·퀴즈는 TTS 없음
   const card = set.cards[sess.cardIdxs[sess.pos]];
   if (card.word) speakText(card.word);
+}
+
+/* ---- 퀴즈 옵션 선택 ---- */
+$('#svBack').addEventListener('click', e => {
+  const sess = state.session;
+  if (!sess) return;
+  const set = getSet(sess.setId);
+  if ((set.type || 'vocab') !== 'quiz') return;
+  if (sess.revealed) return; // 이미 답 선택됨
+
+  const btn = e.target.closest('.qopt');
+  if (!btn) return;
+
+  const selectedIdx = parseInt(btn.dataset.qi, 10);
+  const card        = set.cards[sess.cardIdxs[sess.pos]];
+  const correctIdx  = card.correct ?? 0;
+  const isCorrect   = selectedIdx === correctIdx;
+
+  sess.revealed = true;
+
+  // 모든 버튼 비활성화 + 정답/오답 표시
+  document.querySelectorAll('.qopt').forEach((b, bi) => {
+    b.disabled = true;
+    if (bi === correctIdx) b.classList.add('qopt-correct');
+    else if (bi === selectedIdx && !isCorrect) b.classList.add('qopt-wrong');
+  });
+
+  // 해설 표시
+  const explainEl = document.getElementById('quizExplain');
+  if (explainEl) explainEl.style.display = '';
+
+  // 점수 업데이트
+  if (isCorrect) {
+    sess.unknownSet.delete(sess.pos);
+    sess.knownCount = (sess.knownCount || 0) + 1;
+    const flash = $('#svKnownFlash');
+    flash.classList.remove('flash');
+    void flash.offsetWidth;
+    flash.classList.add('flash');
+  } else {
+    sess.unknownSet.add(sess.pos);
+  }
+
+  // 진행바 업데이트
+  const knownN = sess.knownCount || 0;
+  const totalN = sess.cardIdxs.length;
+  $('#knownCount').textContent = knownN;
+  const pct = totalN > 0 ? (knownN / totalN) * 100 : 0;
+  $('#svCardProgressFill').style.width = pct + '%';
+  $('#svCardProgressLabel').textContent = `${knownN} / ${totalN} 완료`;
+
+  // 1.7초 후 자동 다음 카드
+  const capturedPos = sess.pos;
+  const capturedSess = sess;
+  setTimeout(() => {
+    if (state.session !== capturedSess || state.session.pos !== capturedPos) return;
+    const cardEl = $('#svCard');
+    cardEl.classList.add('swipe-left');
+    setTimeout(() => {
+      cardEl.classList.remove('swipe-left');
+      navNext();
+    }, 250);
+  }, 1700);
+});
+
+function triggerQuizOption(idx) {
+  const btns = document.querySelectorAll('.qopt');
+  if (btns[idx] && !btns[idx].disabled) btns[idx].click();
 }
 
 $('#exitStudyBtn').addEventListener('click', () => { showView('home'); renderHome(); });
@@ -1128,18 +1368,28 @@ svCardEl.addEventListener('touchend', e => {
 function swipeCard(direction) {
   const sess = state.session;
   if (!sess) return;
+  const set    = getSet(sess.setId);
+  const isQuiz = (set.type || 'vocab') === 'quiz';
 
-  // 왼쪽 스와이프 = 이전 카드 (첫 카드면 무시)
+  // 왼쪽 스와이프 = 이전 카드
   if (direction === 'left') {
     if (sess.pos <= 0) return;
     const card = $('#svCard');
-    card.classList.add('swipe-right'); // 오른쪽으로 밀려나가며 이전으로
+    card.classList.add('swipe-right');
     setTimeout(() => { card.classList.remove('swipe-right'); navPrev(); }, 250);
     return;
   }
 
-  // 오른쪽 스와이프 = 다음 카드
-  // 커버 열렸으면 알아요, 닫혔으면 나중에
+  // 퀴즈: 답 안 골랐으면 미응답 처리 후 넘기기
+  if (isQuiz) {
+    if (!sess.revealed) sess.unknownSet.add(sess.pos);
+    const card = $('#svCard');
+    card.classList.add('swipe-left');
+    setTimeout(() => { card.classList.remove('swipe-left'); navNext(); }, 250);
+    return;
+  }
+
+  // 플래시카드: 커버 열렸으면 알아요, 닫혔으면 나중에
   const isKnown = !!sess.revealed;
   const card = $('#svCard');
   card.classList.add('swipe-left');
@@ -1154,15 +1404,32 @@ function swipeCard(direction) {
 document.addEventListener('keydown', e => {
   if (state.currentView !== 'study') return;
   if (e.target.matches('input, textarea')) return;
+  const sess = state.session;
+  if (!sess) return;
+  const set    = getSet(sess.setId);
+  const isQuiz = (set?.type || 'vocab') === 'quiz';
+
+  if (isQuiz) {
+    switch (e.key) {
+      case '1': e.preventDefault(); triggerQuizOption(0); break;
+      case '2': e.preventDefault(); triggerQuizOption(1); break;
+      case '3': e.preventDefault(); triggerQuizOption(2); break;
+      case '4': e.preventDefault(); triggerQuizOption(3); break;
+      case 'ArrowRight': case ' ': e.preventDefault(); swipeCard('right'); break;
+      case 'ArrowLeft':            e.preventDefault(); swipeCard('left');  break;
+    }
+    return;
+  }
+
   switch (e.key) {
     case ' ':
       e.preventDefault();
-      if (state.session?.revealed) recoverCard(); else revealCard();
+      if (sess.revealed) recoverCard(); else revealCard();
       break;
-    case 'ArrowDown': e.preventDefault(); revealCard();   break; // 커버 내리기
-    case 'ArrowUp':   e.preventDefault(); recoverCard();  break; // 커버 올리기
-    case 'ArrowRight': e.preventDefault(); swipeCard('right'); break; // 다음 카드
-    case 'ArrowLeft':  e.preventDefault(); swipeCard('left');  break; // 이전 카드
+    case 'ArrowDown': e.preventDefault(); revealCard();        break;
+    case 'ArrowUp':   e.preventDefault(); recoverCard();       break;
+    case 'ArrowRight': e.preventDefault(); swipeCard('right'); break;
+    case 'ArrowLeft':  e.preventDefault(); swipeCard('left');  break;
     case '1': setStar(1); break;
     case '2': setStar(2); break;
     case '3': setStar(3); break;
