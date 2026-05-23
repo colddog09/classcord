@@ -1044,7 +1044,7 @@ function coverRevealedY() {
 }
 function coverSetY(y, spring = false) {
   svCoverEl.style.transition = spring
-    ? 'transform 0.38s cubic-bezier(0.34,1.56,0.64,1)'
+    ? 'transform 0.38s cubic-bezier(0.4,0,0.2,1)'
     : 'none';
   svCoverEl.style.transform = `translateY(${y}px)`;
 }
@@ -1142,7 +1142,7 @@ function recoverCard(fromDrag = false) {
   const sess = state.session;
   if (!sess || !sess.revealed) return;
   sess.revealed = false;
-  svCoverEl.style.transition = 'transform 0.38s cubic-bezier(0.34,1.56,0.64,1)';
+  svCoverEl.style.transition = 'transform 0.38s cubic-bezier(0.4,0,0.2,1)';
   svCoverEl.style.transform  = 'translateY(0)';
   $('#answerBtns').classList.remove('visible');
   $('#kbdRow').classList.add('hidden');
