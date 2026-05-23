@@ -1376,59 +1376,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-family: 'Inter', monospace;
 }
 
-/* 답 확인 버튼 */
-.sv-answer-btns {
-  width: 100%;
-  max-width: 760px;
-  display: none;
-  gap: 0;
-  padding: 0 20px;
-  flex-shrink: 0;
-}
-.sv-answer-btns.visible { display: flex; }
-.sv-btn-known, .sv-btn-unknown {
-  flex: 1;
-  padding: 18px 12px;
-  font-size: 16px;
-  font-weight: 700;
-  font-family: var(--font);
-  border: none;
-  cursor: pointer;
-  transition: filter 0.15s;
-}
-.sv-btn-known {
-  background: #8bc34a;
-  color: #fff;
-  border-radius: 12px 0 0 12px;
-}
-.sv-btn-known:hover { filter: brightness(1.08); }
-.sv-btn-unknown {
-  background: #fff;
-  color: #1a1a1a;
-  border-radius: 0 12px 12px 0;
-  border: 2px solid #e0e0e0;
-  border-left: none;
-}
-.sv-btn-unknown:hover { background: #f5f5f5; }
-
-/* 키보드 힌트 */
-.sv-kbd-row {
-  display: flex;
-  width: 100%;
-  max-width: 760px;
-  padding: 8px 20px 12px;
-  flex-shrink: 0;
-}
-.sv-kbd-row span {
-  flex: 1;
-  text-align: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: #555;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.sv-kbd-row.hidden { visibility: hidden; }
 
 /* ===== OLD STUDY VIEW LAYOUT (keep for sidebar ref) ===== */
 .study-layout {

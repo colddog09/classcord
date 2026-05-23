@@ -781,8 +781,6 @@ function renderStudy() {
   svCoverEl.style.transition = 'none';
   svCoverEl.style.transform  = 'translateY(0)';
   svCoverEl.classList.remove('hidden');
-  $('#answerBtns').classList.remove('visible');
-  $('#kbdRow').classList.add('hidden');
 
   // 별점
   const star = set.starRatings[cardIdx] || 0;
@@ -811,9 +809,13 @@ function startCoverDrag(e) {
   const sess = state.session;
   if (!sess) return;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   coverDrag = {
     startY:    clientY,
+    startX:    clientX,
+    lastX:     clientX,
     delta:     0,
+    deltaX:    0,
     moved:     false,
     revealing: !sess.revealed,   // false = 다시 덮기 모드
   };
@@ -823,7 +825,10 @@ function startCoverDrag(e) {
 function onCoverMove(e) {
   if (!coverDrag) return;
   if (e.cancelable) e.preventDefault();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  coverDrag.lastX  = clientX;
+  coverDrag.deltaX = clientX - coverDrag.startX;
 
   if (coverDrag.revealing) {
     // ↓ 아래로 (공개)
@@ -848,10 +853,17 @@ function endCoverDrag() {
   document.removeEventListener('touchend',  endCoverDrag);
   if (!coverDrag) return;
 
-  const { delta, moved, revealing } = coverDrag;
+  const { delta, deltaX, moved, revealing } = coverDrag;
   coverDrag = null;
   const height = svCoverEl.offsetHeight || 220;
   const threshold = height * 0.28;
+
+  // 가로 스와이프 → 현재 상태로 다음 카드로 넘김
+  if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(delta) * 1.5) {
+    if (revealing) coverSetY(0, true);
+    advanceCard();
+    return;
+  }
 
   if (revealing) {
     if (!moved) { svCoverEl.style.transition = ''; return; }  // 클릭 이벤트에 위임
@@ -888,11 +900,8 @@ function revealCard(fromDrag = false) {
   const sess = state.session;
   if (!sess || sess.revealed) return;
   sess.revealed = true;
-  // 커버를 핸들 위치(아래)로 스프링 이동
   svCoverEl.style.transition = 'transform 0.40s cubic-bezier(0.4,0,0.2,1)';
   svCoverEl.style.transform  = `translateY(${coverRevealedY()}px)`;
-  $('#answerBtns').classList.add('visible');
-  $('#kbdRow').classList.remove('hidden');
   speakCurrent();
 }
 
@@ -902,8 +911,6 @@ function recoverCard(fromDrag = false) {
   sess.revealed = false;
   svCoverEl.style.transition = 'transform 0.38s cubic-bezier(0.34,1.56,0.64,1)';
   svCoverEl.style.transform  = 'translateY(0)';
-  $('#answerBtns').classList.remove('visible');
-  $('#kbdRow').classList.add('hidden');
 }
 
 // 단순 탭(클릭) 핸들러
@@ -962,32 +969,27 @@ function setStar(v, force = false) {
   renderStudy();
 }
 
-$('#unknownBtn').addEventListener('click', () => markUnknownAndNext());
-$('#knownBtn').addEventListener('click', () => markKnownAndNext());
-
-function markUnknownAndNext() {
+// 펼쳐진 상태 → 학습 완료, 덮힌 상태 → 나중에 한번 더
+function advanceCard() {
   const sess = state.session;
-  if (!sess || !sess.revealed) return;
-  sess.unknownSet.add(sess.pos);
-  navNext();
-}
-function markKnownAndNext() {
-  const sess = state.session;
-  if (!sess || !sess.revealed) return;
-  sess.unknownSet.delete(sess.pos);
-  sess.knownCount = (sess.knownCount || 0) + 1;
-
-  // ✓ 플래시 + 카드 슬라이드 아웃 효과
-  const flash = $('#svKnownFlash');
-  const card  = $('#svCard');
-  flash.classList.remove('flash');
-  void flash.offsetWidth;
-  flash.classList.add('flash');
-  card.classList.add('known-out');
-  setTimeout(() => {
-    card.classList.remove('known-out');
+  if (!sess) return;
+  if (sess.revealed) {
+    sess.unknownSet.delete(sess.pos);
+    sess.knownCount = (sess.knownCount || 0) + 1;
+    const flash = $('#svKnownFlash');
+    const card  = $('#svCard');
+    flash.classList.remove('flash');
+    void flash.offsetWidth;
+    flash.classList.add('flash');
+    card.classList.add('known-out');
+    setTimeout(() => {
+      card.classList.remove('known-out');
+      navNext();
+    }, 320);
+  } else {
+    sess.unknownSet.add(sess.pos);
     navNext();
-  }, 320);
+  }
 }
 
 /* ---- Web Speech API (무료, 브라우저 내장) ---- */
@@ -1037,9 +1039,8 @@ svCardEl.addEventListener('touchend', e => {
   if (touchStartX === null) return;
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
-  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && state.session?.revealed) {
-    if (dx < 0) markKnownAndNext();
-    else markUnknownAndNext();
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    advanceCard();
   }
   touchStartX = touchStartY = null;
 });
@@ -1051,11 +1052,11 @@ document.addEventListener('keydown', e => {
   switch (e.key) {
     case ' ':
       e.preventDefault();
-      if (state.session?.revealed) markUnknownAndNext();
+      if (state.session?.revealed) advanceCard();
       else revealCard();
       break;
-    case 'ArrowRight': e.preventDefault(); if (state.session?.revealed) markKnownAndNext(); break;
-    case 'ArrowLeft':  e.preventDefault(); if (state.session?.revealed) markUnknownAndNext(); break;
+    case 'ArrowRight': e.preventDefault(); advanceCard(); break;
+    case 'ArrowLeft':  e.preventDefault(); advanceCard(); break;
     case '1': setStar(1); break;
     case '2': setStar(2); break;
     case '3': setStar(3); break;
