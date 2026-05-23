@@ -97,6 +97,14 @@
   </div>
 
   <div class="field-group">
+    <label class="field-label">세트 유형</label>
+    <div class="option-row" id="setTypeChips">
+      <button class="option-chip active" data-type="vocab">📚 단어 암기 <small>단어·발음·뜻</small></button>
+      <button class="option-chip" data-type="history">🏛 역사·암기 <small>앞면·뒷면</small></button>
+    </div>
+  </div>
+
+  <div class="field-group">
     <label class="field-label">카드 테마 색상</label>
     <div class="color-row">
       <input type="color" class="color-picker" id="editColorInput" value="#3B82F6" />
@@ -110,9 +118,9 @@
       <thead>
         <tr>
           <th class="row-num">#</th>
-          <th>단어</th>
-          <th>발음</th>
-          <th>뜻</th>
+          <th id="thWord">단어</th>
+          <th id="thPhonetic" class="col-phonetic">발음</th>
+          <th id="thMeaning">뜻</th>
           <th class="row-actions"></th>
         </tr>
       </thead>

@@ -189,9 +189,10 @@ function renderHome() {
     const avg = avgRating(s);
     const rd  = Math.round(avg);
     const stars = '★'.repeat(rd);
+    const badge = s.type === 'history' ? '역사' : '단어';
     return `
       <div class="ql-set-row" data-action="open-detail" data-id="${s.id}" style="animation-delay:${idx*30}ms;">
-        <span class="ql-badge">단어</span>
+        <span class="ql-badge">${badge}</span>
         <span class="ql-row-name">${escapeHtml(s.name)}</span>
         <span class="ql-row-count">${s.cards.length} 카드</span>
         ${stars ? `<span class="ql-row-stars">${stars}</span>` : ''}
@@ -218,6 +219,8 @@ function openDetail(id) {
   $('#detailBanner').style.background = s.themeColor || '#8bc34a';
   $('#detailName').textContent = s.name;
   $('#detailMeta').textContent = `${s.cards.length} 카드 | ${formatDate(s.lastStudied)}`;
+  document.querySelector('.detail-badge').textContent = s.type === 'history' ? '역사' : '단어';
+  const isHistory = (s.type || 'vocab') === 'history';
   $('#detailGrid').innerHTML = s.cards.map((c, i) => {
     const rating = s.starRatings[i] || 0;
     const stars = [1,2,3].map(n =>
@@ -227,7 +230,7 @@ function openDetail(id) {
       <div class="detail-card-inner">
         <div class="detail-card-front">
           <div class="detail-card-word">${escapeHtml(c.word || c.meaning)}</div>
-          ${c.phonetic ? `<div class="detail-card-phonetic">${escapeHtml(c.phonetic)}</div>` : ''}
+          ${!isHistory && c.phonetic ? `<div class="detail-card-phonetic">${escapeHtml(c.phonetic)}</div>` : ''}
           <div class="dc-stars">${stars}</div>
         </div>
         <div class="detail-card-back">
@@ -323,9 +326,12 @@ function cloneSet(id) {
 function exportSet(id) {
   const s = getSet(id);
   if (!s) return;
-  const header = 'word,phonetic,meaning';
+  const isHistory = (s.type || 'vocab') === 'history';
+  const header = isHistory ? 'front,back' : 'word,phonetic,meaning';
   const rows = s.cards.map(c =>
-    [c.word, c.phonetic, c.meaning].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+    isHistory
+      ? [c.word, c.meaning].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')
+      : [c.word, c.phonetic, c.meaning].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')
   );
   const csv = [header, ...rows].join('\r\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -528,7 +534,8 @@ function openEdit(id) {
     $('#editTitle').textContent = '단어장 편집';
   } else {
     state.editDraft = {
-      id: uid(), name: '', themeColor: '#3B82F6', lastStudied: null, starRatings: {},
+      id: uid(), name: '', themeColor: '#3B82F6', type: 'vocab',
+      lastStudied: null, starRatings: {},
       cards: [{ word: '', phonetic: '', meaning: '' }],
     };
     $('#editTitle').textContent = '새 단어장';
@@ -536,9 +543,36 @@ function openEdit(id) {
   $('#editNameInput').value  = state.editDraft.name;
   $('#editColorInput').value = state.editDraft.themeColor || '#3B82F6';
   syncColorPreview();
+  applySetType(state.editDraft.type || 'vocab');
   renderEditTable();
   showView('edit');
 }
+
+function applySetType(type) {
+  state.editDraft.type = type;
+  const isHistory = type === 'history';
+  // 칩 활성화
+  $$('#setTypeChips .option-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.type === type)
+  );
+  // 테이블 헤더 변경
+  $('#thWord').textContent    = isHistory ? '앞면 (용어·사건)' : '단어';
+  $('#thMeaning').textContent = isHistory ? '뒷면 (설명·내용)' : '뜻';
+  // 발음 컬럼 숨기기/보이기
+  const phoneCols = document.querySelectorAll('.col-phonetic, [data-field="phonetic"]');
+  phoneCols.forEach(el => { el.style.display = isHistory ? 'none' : ''; });
+  // 스피커 버튼 숨기기
+  document.querySelectorAll('.preview-btn').forEach(el => {
+    el.style.display = isHistory ? 'none' : '';
+  });
+}
+
+$('#setTypeChips').addEventListener('click', e => {
+  const chip = e.target.closest('[data-type]');
+  if (!chip) return;
+  applySetType(chip.dataset.type);
+  renderEditTable();
+});
 
 function syncColorPreview() {
   $('#colorPreview').style.background = state.editDraft.themeColor;
@@ -546,23 +580,28 @@ function syncColorPreview() {
 
 function renderEditTable() {
   const tbody = $('#editTableBody');
+  const isHistory = (state.editDraft?.type || 'vocab') === 'history';
+  const wordPh    = isHistory ? '앞면 (용어·사건)' : '단어';
+  const meaningPh = isHistory ? '뒷면 (설명·내용)' : '뜻';
   tbody.innerHTML = state.editDraft.cards.map((c, i) => `
     <tr data-idx="${i}">
       <td class="row-num">${i + 1}</td>
       <td>
         <div class="word-cell">
-          <input type="text" data-field="word"     value="${escapeHtml(c.word)}"     placeholder="단어" />
+          <input type="text" data-field="word"     value="${escapeHtml(c.word)}"     placeholder="${wordPh}" />
           <button class="preview-btn" data-action="preview" title="발음 미리듣기">🔊</button>
         </div>
       </td>
-      <td><input type="text" data-field="phonetic" value="${escapeHtml(c.phonetic)}" placeholder="/발음/" /></td>
-      <td><input type="text" data-field="meaning"  value="${escapeHtml(c.meaning)}"  placeholder="뜻" /></td>
+      <td class="col-phonetic"><input type="text" data-field="phonetic" value="${escapeHtml(c.phonetic)}" placeholder="/발음/" /></td>
+      <td><input type="text" data-field="meaning"  value="${escapeHtml(c.meaning)}"  placeholder="${meaningPh}" /></td>
       <td class="row-actions">
         <button class="btn danger sm" data-action="delete-row" title="삭제">🗑</button>
       </td>
     </tr>
   `).join('');
   $('#cardCount').textContent = `총 ${state.editDraft.cards.length}개 카드`;
+  // DOM이 재생성됐으므로 타입 표시 상태 재적용
+  if (state.editDraft) applySetType(state.editDraft.type || 'vocab');
 }
 
 $('#editBackBtn').addEventListener('click', () => { showView('home'); renderHome(); });
@@ -634,7 +673,17 @@ $('#saveSetBtn').addEventListener('click', () => {
 function openSetup(id) {
   state.currentSetId = id;
   const s = getSet(id);
+  const isHistory = (s.type || 'vocab') === 'history';
   $('#setupTitle').textContent = s.name + ' — 학습 설정';
+  // 모드 칩 레이블 업데이트 (역사 세트)
+  const [wordChip, meaningChip] = $$('#modeChips .option-chip');
+  if (isHistory) {
+    if (wordChip)    wordChip.innerHTML    = '앞면 제시 <small>앞면: 용어</small>';
+    if (meaningChip) meaningChip.innerHTML = '뒷면 제시 <small>앞면: 뜻</small>';
+  } else {
+    if (wordChip)    wordChip.innerHTML    = '단어 제시 <small>앞면: 단어</small>';
+    if (meaningChip) meaningChip.innerHTML = '뜻 제시 <small>앞면: 뜻</small>';
+  }
   setChips('modeChips',   'mode',   state.setupConfig.mode);
   setChips('orderChips',  'order',  state.setupConfig.order);
   setChips('filterChips', 'filter', String(state.setupConfig.filter));
@@ -750,19 +799,27 @@ function renderStudy() {
 
   const knownN = sess.knownCount || 0;
   const totalN = sess.cardIdxs.length;
+  const isHistory = (set.type || 'vocab') === 'history';
   $('#knownCount').textContent = knownN;
   $('#totalCount').textContent = totalN;
-  $('#modeBadge').textContent  = sess.mode === 'word' ? '단어 제시' : '뜻 제시';
+  if (isHistory) {
+    $('#modeBadge').textContent = sess.mode === 'word' ? '앞면 제시' : '뒷면 제시';
+  } else {
+    $('#modeBadge').textContent = sess.mode === 'word' ? '단어 제시' : '뜻 제시';
+  }
   // 카드 내 진행 표시
   const pct = totalN > 0 ? (knownN / totalN) * 100 : 0;
   $('#svCardProgressFill').style.width = pct + '%';
   $('#svCardProgressLabel').textContent = `${knownN} / ${totalN} 학습 완료`;
 
+  // 스피커 버튼 — 역사 세트는 TTS 불필요
+  $('#speakBtn').style.display = isHistory ? 'none' : '';
+
   // 앞면
   const front = $('#svFront');
   if (sess.mode === 'word') {
     front.innerHTML = `<div class="sv-word">${escapeHtml(card.word)}</div>` +
-      (card.phonetic ? `<div class="sv-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
+      (!isHistory && card.phonetic ? `<div class="sv-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
   } else {
     front.innerHTML = `<div class="sv-meaning-front">${escapeHtml(card.meaning)}</div>`;
   }
@@ -773,7 +830,7 @@ function renderStudy() {
     back.innerHTML = `<div class="sv-meaning">${escapeHtml(card.meaning)}</div>`;
   } else {
     back.innerHTML = `<div class="sv-back-word">${escapeHtml(card.word)}</div>` +
-      (card.phonetic ? `<div class="sv-back-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
+      (!isHistory && card.phonetic ? `<div class="sv-back-phonetic">${escapeHtml(card.phonetic)}</div>` : '');
   }
 
   // 커버 초기화 (새 카드 → 완전히 덮기)
@@ -1029,6 +1086,7 @@ if (window.speechSynthesis) {
 function speakCurrent() {
   const sess = state.session; if (!sess) return;
   const set  = getSet(sess.setId);
+  if ((set.type || 'vocab') === 'history') return; // 역사 세트는 TTS 없음
   const card = set.cards[sess.cardIdxs[sess.pos]];
   if (card.word) speakText(card.word);
 }
