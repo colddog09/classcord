@@ -917,9 +917,11 @@ $('#speakBtn').addEventListener('click', e => { e.stopPropagation(); speakCurren
 
 /* ---- 진행 ---- */
 function navNext() {
+  // 마지막 카드를 넘길 때: 나중에 카드 처리
   const sess = state.session;
   const newPos = sess.pos + 1;
   if (newPos >= sess.cardIdxs.length) {
+    // 세트 종료 — unknownSet 기반으로 재학습 또는 완료
     const unknownCardIdxs = [...sess.unknownSet].map(pos => sess.cardIdxs[pos]);
     if (unknownCardIdxs.length > 0) {
       toast(`😕 ${unknownCardIdxs.length}개 카드 다시 학습합니다`);
@@ -937,6 +939,14 @@ function navNext() {
     return;
   }
   sess.pos = newPos;
+  sess.flipped = false;
+  renderStudy();
+}
+
+function navPrev() {
+  const sess = state.session;
+  if (!sess || sess.pos <= 0) return;
+  sess.pos -= 1;
   sess.flipped = false;
   renderStudy();
 }
@@ -1046,12 +1056,23 @@ svCardEl.addEventListener('touchend', e => {
 function swipeCard(direction) {
   const sess = state.session;
   if (!sess) return;
-  const card = $('#svCard');
-  // 커버 열려있으면 → 알아요, 닫혀있으면 → 나중에
+
+  // 왼쪽 스와이프 = 이전 카드 (첫 카드면 무시)
+  if (direction === 'left') {
+    if (sess.pos <= 0) return;
+    const card = $('#svCard');
+    card.classList.add('swipe-right'); // 오른쪽으로 밀려나가며 이전으로
+    setTimeout(() => { card.classList.remove('swipe-right'); navPrev(); }, 250);
+    return;
+  }
+
+  // 오른쪽 스와이프 = 다음 카드
+  // 커버 열렸으면 알아요, 닫혔으면 나중에
   const isKnown = !!sess.revealed;
-  card.classList.add(direction === 'left' ? 'swipe-left' : 'swipe-right');
+  const card = $('#svCard');
+  card.classList.add('swipe-left');
   setTimeout(() => {
-    card.classList.remove('swipe-left', 'swipe-right');
+    card.classList.remove('swipe-left');
     if (isKnown) markKnownAndNext();
     else markUnknownAndNext();
   }, 250);
@@ -1067,8 +1088,8 @@ document.addEventListener('keydown', e => {
       if (state.session?.revealed) markUnknownAndNext();
       else revealCard();
       break;
-    case 'ArrowRight': e.preventDefault(); swipeCard('right'); break;
-    case 'ArrowLeft':  e.preventDefault(); swipeCard('left'); break;
+    case 'ArrowRight': e.preventDefault(); swipeCard('right'); break; // 다음
+    case 'ArrowLeft':  e.preventDefault(); swipeCard('left');  break; // 이전
     case '1': setStar(1); break;
     case '2': setStar(2); break;
     case '3': setStar(3); break;
