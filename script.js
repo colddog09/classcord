@@ -1038,22 +1038,21 @@ svCardEl.addEventListener('touchend', e => {
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-    if (dx < 0) swipeCard('known');    // 왼쪽 → 알아요
-    else        swipeCard('unknown');  // 오른쪽 → 나중에
+    swipeCard(dx < 0 ? 'left' : 'right');
   }
   touchStartX = touchStartY = null;
 });
 
-function swipeCard(result) {
+function swipeCard(direction) {
   const sess = state.session;
   if (!sess) return;
   const card = $('#svCard');
-  // 커버 열린 상태 = 알아요, 커버 닫힌 상태 = 나중에
-  // result 파라미터로 직접 제어
-  card.classList.add(result === 'known' ? 'swipe-left' : 'swipe-right');
+  // 커버 열려있으면 → 알아요, 닫혀있으면 → 나중에
+  const isKnown = !!sess.revealed;
+  card.classList.add(direction === 'left' ? 'swipe-left' : 'swipe-right');
   setTimeout(() => {
     card.classList.remove('swipe-left', 'swipe-right');
-    if (result === 'known') markKnownAndNext();
+    if (isKnown) markKnownAndNext();
     else markUnknownAndNext();
   }, 250);
 }
@@ -1068,8 +1067,8 @@ document.addEventListener('keydown', e => {
       if (state.session?.revealed) markUnknownAndNext();
       else revealCard();
       break;
-    case 'ArrowRight': e.preventDefault(); swipeCard('known'); break;
-    case 'ArrowLeft':  e.preventDefault(); swipeCard('unknown'); break;
+    case 'ArrowRight': e.preventDefault(); swipeCard('right'); break;
+    case 'ArrowLeft':  e.preventDefault(); swipeCard('left'); break;
     case '1': setStar(1); break;
     case '2': setStar(2); break;
     case '3': setStar(3); break;
