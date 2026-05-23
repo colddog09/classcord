@@ -1073,7 +1073,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .sv-card-wrap {
   width: 100%;
   max-width: 760px;
-  padding: 0 20px;
+  padding: 0 20px 44px;
   flex: 1;
   min-height: 0;
   display: flex;
